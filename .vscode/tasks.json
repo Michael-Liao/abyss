@@ -1,0 +1,27 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "CMake: Debug build",
+			"command": "/usr/local/bin/cmake",
+			"args": [
+				"--build", "${workspaceFolder}/build",
+				"--config", "Debug",
+				"--target", "all",
+				"--", "-j18"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "cmake debug build (all targets)"
+		}
+	]
+}
