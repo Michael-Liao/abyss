@@ -7,7 +7,9 @@
 
 #include "abyss_export.h"
 #include "core/array.h"
+#include "core/utility.h"
 #include "core/dtype.h"
+#include "core/traits.h"
 #include "core/visitor.h"
 #include "tensor.h"
 #include "types.h"
@@ -44,8 +46,8 @@ class EmptyVisitor final : public VisitorBase,
   template <typename T>
   void eval(DTypeImpl<T>* dtype) {
     dtype_ = dtype;
-    Tensor::shape_ = shape_;
-    strides_ = shape2strides(shape_);
+    desc_.shape = shape_;
+    desc_.strides = shape2strides(shape_);
 
     size_t output_size = shape2size(shape_);
     data_ = std::make_shared<ArrayImpl<T>>(output_size);
@@ -82,36 +84,45 @@ class FullVisitor final
     size_t output_size = shape2size(shape_);
 
     dtype_ = dtype;
-    Tensor::shape_ = shape_;
-    strides_ = shape2strides(shape_);
+    desc_.offset = 0;
+    desc_.shape = shape_;
+    desc_.strides = shape2strides(shape_);
     data_ = std::make_shared<ArrayImpl<T2>>(output_size, value->at(0));
   }
 };
 
-class ArangeVisitor final
-    : public VisitorBase,
-      public Tensor,
-      public BinaryVisitor<ArrayImpl<int32_t>, DTypeImpl<int32_t>>,
-      public BinaryVisitor<ArrayImpl<int32_t>, DTypeImpl<double>>,
-      public BinaryVisitor<ArrayImpl<double>, DTypeImpl<int32_t>>,
-      public BinaryVisitor<ArrayImpl<double>, DTypeImpl<double>> {
+// template <typename T, std::enable_if_t<is_supported_dtype<T>::value, bool> = true>
+template <typename T>
+class ArangeVisitor final : public VisitorBase,
+                            public Tensor,
+                            public UnaryVisitor<DTypeImpl<bool>>,
+                            public UnaryVisitor<DTypeImpl<uint8_t>>,
+                            public UnaryVisitor<DTypeImpl<int32_t>>,
+                            public UnaryVisitor<DTypeImpl<double>> {
  public:
-  ArangeVisitor() = default;
+  static_assert(is_supported_dtype<T>::value, "ArangeVisitor must be a supported type");
+  // ArangeVisitor() = default;
+  ArangeVisitor(T start, T stop, T step)
+      : start_{start}, stop_{stop}, step_{step} {}
 
-  void visit(ArrayImpl<int32_t>*, DTypeImpl<int32_t>*) override;
-  void visit(ArrayImpl<int32_t>*, DTypeImpl<double>*) override;
-  void visit(ArrayImpl<double>*, DTypeImpl<int32_t>*) override;
-  void visit(ArrayImpl<double>*, DTypeImpl<double>*) override;
+  void visit(DTypeImpl<bool>* dtype) override { eval(dtype); }
+  void visit(DTypeImpl<uint8_t>* dtype) override { eval(dtype); }
+  void visit(DTypeImpl<int32_t>* dtype) override { eval(dtype); }
+  void visit(DTypeImpl<double>* dtype) override { eval(dtype); }
 
  private:
-  template <typename T1, typename T2>
-  void eval(ArrayImpl<T1>* arr, DTypeImpl<T2>* dtype) {
-    auto out = ArrayImpl<T2>::from_range(arr->at(0), arr->at(1), arr->at(2));
+  T start_ = 0;
+  T stop_ = 1;
+  T step_ = 1;
+
+  template <typename TgtTp>
+  void eval(DTypeImpl<TgtTp>* dtype) {
+    auto out = ArrayImpl<T>::from_range(start_, stop_, step_);
 
     dtype_ = dtype;
-    Tensor::shape_ = {static_cast<int>(out.size())};
-    strides_ = {1};
-    data_ = std::make_shared<ArrayImpl<T2>>(out);
+    desc_.shape = {static_cast<int>(out.size())};
+    desc_.strides = {1};
+    data_ = std::make_shared<ArrayImpl<TgtTp>>(out);
   }
 };
 

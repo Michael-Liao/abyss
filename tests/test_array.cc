@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "core/array.h"
+#include "core/utility.h"
 // #include "types.h"
 
 TEST_CASE("contruct Array from range", "[core][Array][from_range]") {
@@ -85,116 +86,6 @@ TEST_CASE("abyss Array iterator - NDIterator", "[core][Array][iterator]") {
   }
 }
 
-TEST_CASE("broadcast copy", "[core][Array][broadcast_copy]") {
-  using namespace abyss::core;
-
-  SECTION("broadcast with same dimension") {
-    std::vector<int> shape = {4, 1, 2};
-    // auto arr = ArrayImpl<int32_t>::from_range(8);
-    std::vector<int> dst_shape = {4, 3, 2};
-    // auto arr_out = std::make_shared<ArrayImpl<int32_t>>(24);
-
-    std::vector<int32_t> target = {0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3,
-                                   4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7};
-
-    SECTION("using std::vector data") {
-      std::vector<int> arr = {0, 1, 2, 3, 4, 5, 6, 7};
-      std::vector<int> arr_out(24, -1);
-      broadcast_copy(arr.begin(), arr.end(), shape, arr_out.begin(), dst_shape);
-
-      for (size_t i = 0; i < 24; i++) {
-        INFO("index: " << i);
-        CHECK(arr_out.at(i) == target[i]);
-      }
-    }
-
-    SECTION("using ArrayImpl data") {
-      auto arr = ArrayImpl<int32_t>::from_range(8);
-      auto arr_out = ArrayImpl<int32_t>(24, -1);
-      broadcast_copy(arr.begin(), arr.end(), shape, arr_out.begin(), dst_shape);
-
-      for (size_t i = 0; i < 24; i++) {
-        INFO("index: " << i);
-        CHECK(arr_out.at(i) == target[i]);
-      }
-    }
-  }
-
-  SECTION("broadcast to higher dimensions") {
-    std::vector<int> d_shape = {4, 3};
-    auto arr = ArrayImpl<int32_t>::from_range(3);
-
-    std::vector<int> target = {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
-
-    SECTION("normal case") {
-      std::vector<int> shape = {3};
-      ArrayImpl<int32_t> out(12);
-      broadcast_copy(arr.begin(), arr.end(), shape, out.begin(), d_shape);
-
-      for (size_t i = 0; i < 12; i++) {
-        INFO("index: " << i);
-        CHECK(out[i] == target[i]);
-      }
-    }
-
-    SECTION("including leading shape of 1") {
-      std::vector<int> shape = {1, 3};
-      ArrayImpl<int32_t> out(12);
-      
-      broadcast_copy(arr.begin(), arr.end(), shape, out.begin(), d_shape);
-
-      for (size_t i = 0; i < 12; i++) {
-        INFO("index: " << i);
-        CHECK(out[i] == target[i]);
-      }
-    }
-  }
-
-  SECTION("fit scalar to tensor") {
-    std::vector<int> shape = {1};
-    std::vector<int> d_shape = {4, 2, 2};
-
-    ArrayImpl<int32_t> arr(1, 1); // scalar
-    ArrayImpl<int32_t> out(16);
-
-    broadcast_copy(arr.begin(), arr.end(), shape, out.begin(), d_shape);
-
-    for (size_t i = 0; i < 16; i++) {
-      CHECK(out[i] == 1);
-    }
-  }
-
-  SECTION("multiple broadcasts") {
-    // ultimate test with all above conditions
-    // Input:      1 x 3 x 1 x 2
-    // Output: 2 x 4 x 3 x 2 x 2
-    //         ^~~~~~~~~~~~~~~~~~~ empty dimension
-    //             ^~~~~~~~~~~~~~~ leading 1
-    //                     ^~~~~~~ in-shape broadcast
-    std::vector<int> shape = {1, 3, 1, 2};
-    std::vector<int> d_shape = {2, 4, 3, 2, 2};
-
-    ArrayImpl<int32_t> arr(6, 2);
-    ArrayImpl<int32_t> out(96, -1);
-
-    ArrayImpl<int32_t>::iterator end_it;
-
-    end_it = broadcast_copy(arr.begin(), arr.end(), shape, out.begin(), d_shape);
-
-    for (auto &&v : out) {
-      REQUIRE(v == 2);
-    }
-
-    REQUIRE(end_it == out.end());
-  }
-
-  // SECTION("ignore dimemsion") {
-  //   // this is for matmul broadcast schemes
-  //   // shape1: 4 x 9 x 3 x 2
-  //   // shape2:         1 x 2 x 5
-  //   // output: 4 x 9 x 3 x 5
-  // }
-}
 
 TEST_CASE("initialize array with containers", "[array][constructor]") {
   using namespace abyss::core;
@@ -216,5 +107,36 @@ TEST_CASE("initialize array with containers", "[array][constructor]") {
     for (size_t i = 0; i < 3; i++) {
       REQUIRE(arr[i] == target[i]);
     }
+  }
+}
+
+TEST_CASE("n-dim iterators that calculates proper offsets", "[array][NDIterator]") {
+  using namespace abyss::core;
+  auto arr = ArrayImpl<int>::from_range(6);
+
+  SECTION("contiguous array") {
+    TensorDesc desc{0, {2, 3}, {3, 1}};
+
+    auto it = arr.nbegin(desc);
+    for (size_t i = 0; i < 2 * 3; i++) {
+      REQUIRE(*it == i);
+      it++;
+    }
+    
+    REQUIRE(it == arr.nend(desc));
+  }
+
+  SECTION("a slice") {
+    TensorDesc desc{3, {3}, {1}};
+
+    auto it = arr.nbegin(desc);
+    int count = 0;
+    while (it != arr.nend(desc)) {
+      ++it;
+      ++count;
+    }
+
+    REQUIRE(count == it - arr.nbegin(desc));
+    REQUIRE_FALSE(it - arr.nbegin(desc) == arr.size());
   }
 }

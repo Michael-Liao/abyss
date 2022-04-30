@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/array.h"
+#include "core/utility.h"
 #include "core/dtype.h"
 #include "core/visitor.h"
 #include "traits.h"
@@ -25,31 +26,71 @@ class CopyVisitor final : public VisitorBase,
                           public UnaryVisitor<ArrayImpl<int32_t>>,
                           public UnaryVisitor<ArrayImpl<double>> {
  public:
-  CopyVisitor(std::vector<int> shape);
+  CopyVisitor(TensorDesc desc);
 
   void visit(ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<double>*) override;
 
  private:
-  std::vector<int> shape_;
+  TensorDesc in_desc_;
 
   template <typename T>
   void eval(ArrayImpl<T>* from) {
     dtype_ = stypeof<T>();
-    Tensor::shape_ = shape_;
-    strides_ = shape2strides(shape_);
-    data_ = std::make_shared<ArrayImpl<T>>(*from);
+    desc_.offset = 0;
+    desc_.shape = in_desc_.shape;
+    desc_.strides = shape2strides(in_desc_.shape);
+    auto arr = std::make_shared<ArrayImpl<T>>(shape2size(in_desc_.shape));
+
+    for (size_t o = 0; o < arr->size(); o++) {
+      // calculate the input offset (for non-contiguous Tensors)
+      auto i_indices = unravel_index(o, in_desc_.shape);
+      size_t offset = in_desc_.offset;
+      for (size_t j = 0; j < i_indices.size(); j++) {
+        offset += in_desc_.strides[j] * i_indices[j];
+      }
+
+      // copy the data
+      arr->at(o) = from->at(offset);
+    }
+    
+    data_ = arr;
+  }
+};
+
+class AssignToViewVisitor
+    : public VisitorBase,
+      // public Tensor,
+      public BinaryVisitor<ArrayImpl<int32_t>, ArrayImpl<int32_t>>,
+      public BinaryVisitor<ArrayImpl<int32_t>, ArrayImpl<double>>,
+      public BinaryVisitor<ArrayImpl<double>, ArrayImpl<int32_t>>,
+      public BinaryVisitor<ArrayImpl<double>, ArrayImpl<double>> {
+ public:
+  AssignToViewVisitor(TensorDesc desc1, TensorDesc desc2);
+  void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
+  void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
+  void visit(ArrayImpl<double>*, ArrayImpl<int32_t>*) override;
+  void visit(ArrayImpl<double>*, ArrayImpl<double>*) override;
+
+ private:
+  TensorDesc desc1_;
+  TensorDesc desc2_;
+  template <typename T1, typename T2>
+  void eval(ArrayImpl<T1>* from, ArrayImpl<T2>* to) {
+    if (!is_broadcastable(desc1_.shape, desc2_.shape)) {
+      throw std::domain_error("assignment to view must be broadcastable");
+    }
+    broadcast_copy(from->begin(), from->end(), desc1_, to->begin(), desc2_);
   }
 };
 
 class ArrayPrintVisitor final : public VisitorBase,
-                                public Tensor,
                                 public UnaryVisitor<ArrayImpl<bool>>,
                                 public UnaryVisitor<ArrayImpl<uint8_t>>,
                                 public UnaryVisitor<ArrayImpl<int32_t>>,
                                 public UnaryVisitor<ArrayImpl<double>> {
  public:
-  ArrayPrintVisitor(const std::vector<int>& shape) : shape_{shape} {
+  ArrayPrintVisitor(const TensorDesc& desc) : in_desc_{desc} {
     // std::cout << shape_[0] << std::endl;
   }
   void visit(ArrayImpl<bool>*) override;
@@ -60,7 +101,7 @@ class ArrayPrintVisitor final : public VisitorBase,
   std::string str() { return result_str_; }
 
  private:
-  const std::vector<int>& shape_;
+  TensorDesc in_desc_;
   std::string result_str_;
 
   template <typename T>
@@ -97,39 +138,6 @@ class ArrayPrintVisitor final : public VisitorBase,
     return digit_count;
   }
 
-  template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
-  void print_value(std::ostringstream& oss, T value, int width) {
-    // int width = integral_width + 1;
-    oss << std::setw(width) << std::setfill(' ') << std::right << value;
-  }
-
-  template <typename T,
-            std::enable_if_t<std::is_floating_point<T>::value, int> = 1>
-  void print_value(std::ostringstream& oss, T value, int width) {
-    // int width = 1 + integral_width + oss.precision() + 1;
-    // int precision = oss.precision();
-
-    // if (value == std::trunc(value)) {
-    //   precision = 1;
-    //   oss << std::setprecision(precision);
-    //   width = 1 + integral_width + 2;
-    // }
-
-    // oss.setf(std::ios::showpoint, std::ios::floatfield);
-    // // oss << std::setw(width) << std::setfill(' ') << std::right
-    // //     << value;
-    oss << std::setw(width) << std::setfill(' ') << std::right << value;
-  }
-
-  template <typename T, std::enable_if_t<std::is_same<T, bool>::value, int> = 2>
-  void print_value(std::ostringstream& oss, T value, int integral_width) {
-    oss << std::setw(6) << std::setfill(' ') << std::right
-        << std::boolalpha << value;
-  }
-
-  /**
-   * @brief string formatting for integral types
-   */
   template <typename T>
   void eval(ArrayImpl<T>* arr) {
     std::ostringstream oss;
@@ -142,9 +150,11 @@ class ArrayPrintVisitor final : public VisitorBase,
     // int width = dec_str_width(arr);
     int width = (std::is_same<T, bool>::value) ? 6 : max_str_len(arr) + 1;
 
+    size_t arr_size = shape2size(in_desc_.shape);
+
     int i = 0;
-    while (i < arr->size()) {
-      coords = unravel_index(i, shape_);
+    while (i < arr_size) {
+      coords = unravel_index(i, in_desc_.shape);
 
       // starting brackets
       // lambda to find the first none zero dimension
@@ -160,19 +170,21 @@ class ArrayPrintVisitor final : public VisitorBase,
         oss << std::setw(start_bracket_pad) << std::setfill('[') << "[";
       }
 
-      // values printing strategies
-      // print_value(oss, arr->at(i), width);
+      size_t offset = in_desc_.offset;
+      for (size_t ix = 0; ix < in_desc_.strides.size(); ix++) {
+        offset += in_desc_.strides[ix] * coords[ix];
+      }
+      
 
-    oss << std::setw(width) << std::setfill(' ') <<std::boolalpha<< std::right << arr->at(i);
-      // oss << std::setw(width + 1) << std::setfill(' ') << std::right
-      //     << a->at(i);
+      oss << std::setw(width) << std::setfill(' ') << std::boolalpha
+          << std::right << arr->at(offset);
 
       // ending brackets
-      int j = shape_.size();
+      int j = in_desc_.shape.size();
       // lambda to check if the current dimension is at the last id.
       auto last_in_dim = [&j, this](int idx) {
         j--;
-        return idx != shape_[j] - 1;
+        return idx != in_desc_.shape[j] - 1;
       };
       int end_bracket_pad =
           std::find_if(coords.rbegin(), coords.rend(), last_in_dim) -
@@ -185,7 +197,7 @@ class ArrayPrintVisitor final : public VisitorBase,
       } else {
         oss << ",";
       }
-
+      
       i++;
     }
 

@@ -5,7 +5,9 @@
 #include "functional.h"
 #include "operators.h"
 #include "tensor.h"
-#include "types.h"
+// #include "types.h"
+#include "scalartype.h"
+
 // #include "traits.h"
 
 TEST_CASE("test Tensor factory: empty", "[Tensor][factory][empty]") {
@@ -18,7 +20,7 @@ TEST_CASE("test Tensor factory: empty", "[Tensor][factory][empty]") {
   // dtype defaults to float64
   REQUIRE(a.dtype() == abyss::kFloat64);
   REQUIRE_FALSE(a.dtype() == abyss::kInt32);
-  REQUIRE_FALSE(a.data() == nullptr);
+  // REQUIRE_FALSE(a.data() == nullptr);
 }
 
 // TEST_CASE("test array construction", "[Tensor][array]") {
@@ -92,7 +94,7 @@ TEST_CASE("tensor copy construction/assignment", "[Tensor][constructor]") {
 
     REQUIRE(copied.size() == original.size());
     REQUIRE(copied.shape() == original.shape());
-    REQUIRE(copied.data() == original.data());
+    // REQUIRE(copied.data() == original.data());
   }
 }
 
@@ -101,26 +103,6 @@ TEST_CASE("test Tensor factory function: arange", "[Tensor][factory][arange]") {
 
   REQUIRE(arr.size() == 6);
 }
-
-// TEST_CASE("test Tensor nested initialization", "[Tensor][nested]") {
-//   SECTION("one layer") {
-//     abyss::Tensor list = {1, 2, 3};
-//     // abyss::Tensor list = {1, 2, 3};
-//     REQUIRE(list.dtype() == abyss::kInt32);
-//     REQUIRE(list.shape() == std::vector<int>{3});
-//     REQUIRE(list.strides() == std::vector<int>{1});
-//     REQUIRE(list.size() == 3);
-//   }
-
-//   SECTION("multiple layers") {
-//     abyss::Tensor nested_list = {{{1, 2, 3}, {2, 1, 3}}};
-//     REQUIRE(nested_list.shape() == std::vector<int>{1, 2, 3});
-//     REQUIRE(nested_list.strides() == std::vector<int>{6, 3, 1});
-//   }
-
-//   // try {1, 2, 3.0}, tuples are not supported
-//   // different shape
-// }
 
 TEST_CASE("tensor printing", "[Tensor][.][print]") {
 
@@ -194,6 +176,30 @@ TEST_CASE("tensor printing", "[Tensor][.][print]") {
 
 }
 
+
+TEST_CASE("tensor broadcast", "[Tensor][broadcast_to]") {
+  abyss::Tensor tsr = 1;
+
+  SECTION("broadcast to multiple axes") {
+    auto view = tsr.broadcast_to({3, 2});
+    REQUIRE(view.shape() == std::vector<int>{3, 2});
+    REQUIRE(view.strides() == std::vector<int>{0, 0});
+  }
+
+  SECTION("broadcast to original shape") {
+    tsr = abyss::full({3, 2}, 1);
+    auto view = tsr.broadcast_to({3, 2});
+
+    REQUIRE(view.shape() == tsr.shape());
+    REQUIRE(view.strides() == tsr.strides());
+  }
+
+  SECTION("throws exception when the new shape is not broadcastable") {
+    tsr = abyss::full({3, 3}, 1);
+    REQUIRE_THROWS(tsr.broadcast_to({4, 3}));
+  }
+}
+
 TEST_CASE("tensor copy", "[Tensor][copy]") {
   abyss::Tensor t = abyss::full({3, 2}, 2);
 
@@ -202,7 +208,7 @@ TEST_CASE("tensor copy", "[Tensor][copy]") {
 
     REQUIRE(t1.dtype() == t.dtype());
     REQUIRE(t1.shape() == t.shape());
-    REQUIRE(t1.data() == t.data());
+    // REQUIRE(t1.data() == t.data());
   }
 
   SECTION("deep copy") {
@@ -210,7 +216,7 @@ TEST_CASE("tensor copy", "[Tensor][copy]") {
 
     REQUIRE(t2.dtype() == t.dtype());
     REQUIRE(t2.shape() == t.shape());
-    REQUIRE_FALSE(t2.data() == t.data());
+    // REQUIRE_FALSE(t2.data() == t.data());
   }
 }
 
@@ -305,4 +311,101 @@ TEST_CASE("tensor comparison equal", "[Tensor][comparison][equal]") {
     REQUIRE(result.shape() == std::vector<int>{3, 2});
     REQUIRE(result.dtype() == abyss::kBool);
   }
+}
+
+TEST_CASE("tensor slicing", "[Tensor][slice]") {
+  auto tsr = abyss::full({3, 2}, 1);
+  REQUIRE(tsr.flags(abyss::TensorFlags::kIsContiguous));
+  REQUIRE(tsr.flags(abyss::TensorFlags::kOwnsData));
+
+  SECTION("slice into a scalar") {
+    REQUIRE(tsr(0, 1).shape() == std::vector<int>{1});
+    REQUIRE(tsr(0, 1).strides() == std::vector<int>{1});
+
+    REQUIRE(tsr(0, 1).flags(abyss::TensorFlags::kIsContiguous));
+    REQUIRE(tsr(0, 1).flags(abyss::TensorFlags::kIsEditable));
+    REQUIRE_FALSE(tsr(0, 1).flags(abyss::TensorFlags::kOwnsData));
+
+    // assign to slice
+    tsr(0, 1) = 2;
+
+    // REQUIRE((int)tsr(0, 0) == 1);
+    bool is_two = (tsr(0, 1) == 2);
+    CHECK(is_two);
+
+    auto view = tsr(0, 1);
+    view = 3;
+    CHECK_FALSE(view.flags(abyss::TensorFlags::kIsEditable));
+    REQUIRE_FALSE(tsr(0, 1) == 3);
+    REQUIRE_NOTHROW(view = abyss::full({2, 2}, 0));
+    // uncomment to feel the power and joy!
+    // std::cout<< tsr <<std::endl;
+
+  }
+
+  SECTION("slice to tensor") {
+    auto tensor = abyss::arange(4*2*3).reshape({4, 2, 3});
+
+    auto tgt_tensor = abyss::arange(6).reshape({2, 3});
+
+    auto view = tensor(0);
+
+    REQUIRE(view.shape() == std::vector<int>{2, 3});
+    REQUIRE(view.strides() == std::vector<int>{3, 1});
+    REQUIRE(bool((view == tgt_tensor).all()));
+    REQUIRE(view.flags(abyss::TensorFlags::kIsContiguous));
+
+    using Id = abyss::Index;
+    view = tensor(Id(0, 3, 2), Id(0), Id(0, 2));
+    REQUIRE(view.shape() == std::vector<int>{3, 2});
+    REQUIRE(view.strides() == std::vector<int>{12, 1});
+    REQUIRE_FALSE(view.flags(abyss::TensorFlags::kIsContiguous));
+  }
+}
+
+TEST_CASE("test Tensor stashing iterators", "[Tensor][Iterator]") {
+  auto tensor = abyss::arange(6).reshape({3, 2});
+
+  SECTION("check iterator specs") {
+
+    auto tensor_it = tensor.begin();
+
+    CHECK(std::is_copy_constructible<abyss::Tensor::Iterator>::value);
+    CHECK(std::is_copy_assignable<abyss::Tensor::Iterator>::value);
+    CHECK(std::is_destructible<abyss::Tensor::Iterator>::value);
+    CHECK(std::is_swappable<abyss::Tensor::Iterator>::value);
+  }
+  
+  SECTION("inside a loop") {
+    auto tensor_it = tensor.begin();
+
+    REQUIRE(tensor_it == tensor.begin());
+    REQUIRE_FALSE(tensor_it == tensor.end());
+
+    size_t tgt_offset = 0;
+    for (size_t i = 0; i < tensor.shape(0); i++) {
+      REQUIRE(tensor_it->shape() == std::vector<int>{2});
+      REQUIRE(tensor_it->strides() == std::vector<int>{1});
+      REQUIRE(tensor_it->offset() == tgt_offset);
+
+      tensor_it++;
+      tgt_offset += 2;
+    }
+
+    REQUIRE(tensor_it == tensor.end());
+  }
+
+  SECTION("using range for") {
+    int val = 0;
+    for (auto&& slice : tensor) {
+      REQUIRE(slice.shape() == std::vector<int>{2});
+      REQUIRE(slice.strides() == std::vector<int>{1});
+      bool match = (slice == abyss::arange(val, val + 2, 1)).all();
+      REQUIRE(match);
+
+      // std::cout << slice << std::endl;
+      val += 2;
+    }
+  }
+  
 }

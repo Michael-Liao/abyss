@@ -16,6 +16,7 @@
 #include "backend/arithmetics.h"
 #include "backend/comparison.h"
 #include "core/array.h"
+#include "core/utility.h"
 #include "core/iterator.h"
 #include "core/traits.h"
 #include "core/visitor.h"
@@ -43,34 +44,36 @@ class VectorVisitor
   static std::vector<int> calc_output_shape(std::vector<int> shape1,
                                             std::vector<int> shape2);
 
-  VectorVisitor(std::vector<int> shape1, std::vector<int> shape2)
-      : shape1_{shape1}, shape2_{shape2} {}
+  VectorVisitor(TensorDesc desc1, TensorDesc desc2)
+      : desc1_{desc1}, desc2_{desc2} {}
 
  protected:
   template <
       typename T1, typename T2, typename OutTp = std::common_type_t<T1, T2>,
       typename Callable = void(const T1*, const T2*, const size_t&, OutTp*)>
   void eval(ArrayImpl<T1>* a, ArrayImpl<T2>* b, Callable fn) {
-    shape_ = calc_output_shape(shape1_, shape2_);
+    desc_.shape = calc_output_shape(desc1_.shape, desc2_.shape);
+    desc_.strides = shape2strides(desc_.shape);
 
-    size_t output_size = shape2size(shape_);
+    size_t output_size = shape2size(desc_.shape);
     auto out = std::make_shared<ArrayImpl<OutTp>>(output_size);
 
     ArrayImpl<T1> a_matched(output_size);
     ArrayImpl<T2> b_matched(output_size);
-    broadcast_copy(a->begin(), a->end(), shape1_, a_matched.begin(), shape_);
-    broadcast_copy(b->begin(), b->end(), shape2_, b_matched.begin(), shape_);
+    broadcast_copy(a->begin(), a->end(), desc1_, a_matched.begin(), desc_);
+    broadcast_copy(b->begin(), b->end(), desc2_, b_matched.begin(), desc_);
 
     fn(a_matched.data(), b_matched.data(), output_size, out->data());
 
     dtype_ = stypeof<OutTp>();
-    strides_ = shape2strides(shape_);
     data_ = out;
   }
 
  private:
-  std::vector<int> shape1_;
-  std::vector<int> shape2_;
+  TensorDesc desc1_;
+  TensorDesc desc2_;
+  // std::vector<int> shape1_;
+  // std::vector<int> shape2_;
 };
 
 /**
@@ -80,7 +83,7 @@ class VectorVisitor
 // class AddVisitor : public VectorVisitor {
 class AddVisitor : public VectorVisitor {
  public:
-  AddVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  AddVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -90,7 +93,7 @@ class AddVisitor : public VectorVisitor {
 
 class SubtractVisitor : public VectorVisitor {
  public:
-  SubtractVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  SubtractVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -100,7 +103,7 @@ class SubtractVisitor : public VectorVisitor {
 
 class MultiplyVisitor : public VectorVisitor {
  public:
-  MultiplyVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  MultiplyVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -110,7 +113,7 @@ class MultiplyVisitor : public VectorVisitor {
 
 class DivideVisitor : public VectorVisitor {
  public:
-  DivideVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  DivideVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -123,7 +126,7 @@ class DivideVisitor : public VectorVisitor {
  */
 class EqualVisitor : public VectorVisitor {
  public:
-  EqualVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  EqualVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -133,7 +136,7 @@ class EqualVisitor : public VectorVisitor {
 
 class NotEqualVisitor : public VectorVisitor {
  public:
-  NotEqualVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  NotEqualVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;

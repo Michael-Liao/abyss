@@ -45,17 +45,17 @@ void FullVisitor::visit(ArrayImpl<double>* value, DTypeImpl<double>* dtype) {
  * ArangeVisitor Implementation
  */
 
-void ArangeVisitor::visit(ArrayImpl<int32_t>* a, DTypeImpl<int32_t>* dtype) {
-  eval(a, dtype);
-}
-void ArangeVisitor::visit(ArrayImpl<int32_t>* a, DTypeImpl<double>* dtype) {
-  eval(a, dtype);
-}
-void ArangeVisitor::visit(ArrayImpl<double>* a, DTypeImpl<int32_t>* dtype) {
-  eval(a, dtype);
-}
-void ArangeVisitor::visit(ArrayImpl<double>* a, DTypeImpl<double>* dtype) {
-  eval(a, dtype);
-}
+// void ArangeVisitor::visit(DTypeImpl<bool>* dtype) {
+//   eval(dtype);
+// }
+// void ArangeVisitor::visit(DTypeImpl<uint8_t>* dtype) {
+//   eval(dtype);
+// }
+// void ArangeVisitor::visit(DTypeImpl<int32_t>* dtype) {
+//   eval(dtype);
+// }
+// void ArangeVisitor::visit(DTypeImpl<double>* dtype) {
+//   eval(dtype);
+// }
 
 }  // namespace abyss::core

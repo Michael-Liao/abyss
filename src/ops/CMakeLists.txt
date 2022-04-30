@@ -2,6 +2,7 @@
 add_library(abyss-ops OBJECT)
 
 set(ABYSS_OPS_HEADERS
+  "dispatcher.h"
   # "visitor.h"
   # "operation.h"
   "dtype_ops.h"

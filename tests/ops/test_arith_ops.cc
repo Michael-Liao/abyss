@@ -1,6 +1,12 @@
 #include <catch2/catch.hpp>
 
+#include "core/utility.h"
 #include "ops/vector_ops.h"
+
+#include "ops/dispatcher.h"
+#include "ops/dtype_ops.h"
+#include "scalartype.h"
+#include "tensor.h"
 
 TEST_CASE("test broadcast shape calculations", "[broadcast][arith]") {
   using namespace abyss::core;
@@ -59,24 +65,37 @@ TEST_CASE("test broadcast shape calculations", "[broadcast][arith]") {
   }
 }
 
-TEST_CASE("add visitor tests", "[add][visit]") {
-  using namespace abyss::core;
-  std::vector<int> shape1 = {3};
-  std::vector<int> shape2 = {3};
+// TEST_CASE("add visitor tests", "[add][visit]") {
+//   using namespace abyss::core;
+//   TensorDesc desc1{0, {3}, {1}};
+//   TensorDesc desc2{0, {3}, {1}};
 
-  ArrayImpl<int32_t> arr1 = {1, 2, 3};
-  ArrayImpl<int32_t> arr2 = {1, 2, 3};
-  ArrayImpl<int32_t>* result;
+//   ArrayImpl<int32_t> arr1 = {1, 2, 3};
+//   ArrayImpl<int32_t> arr2 = {1, 2, 3};
+//   ArrayImpl<int32_t>* result;
 
-  AddVisitor vis(shape1, shape2);
-  vis.visit(&arr1, &arr2);
-  // result = dynamic_cast<ArrayImpl<int32_t>*>(vis.result().data());
-  result = dynamic_cast<ArrayImpl<int32_t>*>(vis.data());
+//   AddVisitor vis(desc1, desc2);
+//   vis.visit(&arr1, &arr2);
+//   // result = dynamic_cast<ArrayImpl<int32_t>*>(vis.result().data());
+//   result = dynamic_cast<ArrayImpl<int32_t>*>(vis.data());
 
-  REQUIRE(result->size() == 3);
-  for (size_t i = 0; i < 3; i++) {
-    REQUIRE(result->at(i) == 2 * (i + 1));
-  }
-  
+//   REQUIRE(result->size() == 3);
+//   for (size_t i = 0; i < 3; i++) {
+//     INFO(i);
+//     CHECK(result->at(i) == 2 * (i + 1));
+//   }
 
-}
+// }
+
+// TEST_CASE("new scalar type", "[.][x]") {
+//   using namespace abyss;
+
+//   x::ScalarType dtype = x::kInt32;
+//   core::Dispatcher<x::ScalarType> tp(dtype);
+//   core::EmptyVisitor vis({3, 2});
+
+//   tp.accept(&vis);
+
+//   Tensor result = vis;
+//   CHECK(result.shape() == std::vector<int>{3, 2});
+// }

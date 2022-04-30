@@ -5,22 +5,22 @@
 #include <exception>
 #include <typeindex>
 
-#include "core/array.h"
+#include "array.h"
 #include "visitor.h"
 // #include "expression.h"
-// #include "traits.h"
+#include "traits.h"
 
 namespace abyss::core {
 
-struct DType : public Visitable {
-  virtual ~DType() = default;
+struct DTypeBase : public Visitable {
+  virtual ~DTypeBase() = default;
 
   virtual std::type_index id() const = 0;
   virtual size_t itemsize() const = 0;
 };
 
 template <typename T>
-class DTypeImpl : public DType {
+class DTypeImpl : public DTypeBase {
  public:
   using value_type = T;
 
@@ -29,6 +29,7 @@ class DTypeImpl : public DType {
   std::type_index id() const override { return typeid(T); }
   size_t itemsize() const override { return 0; }
 
+//  protected:
   void accept(VisitorBase* vis) override {
     auto visitor = dynamic_cast<UnaryVisitor<DTypeImpl<T>>*>(vis);
     visitor->visit(this);
@@ -58,7 +59,7 @@ class DTypeImpl : public DType {
 };
 
 template <>
-class DTypeImpl<void> : public DType {
+class DTypeImpl<void> : public DTypeBase {
  public:
   using value_type = void;
 
@@ -67,6 +68,7 @@ class DTypeImpl<void> : public DType {
   std::type_index id() const override { return typeid(void); }
   size_t itemsize() const override { return 0; }
 
+//  protected:
   void accept(VisitorBase* vis) override {
     auto visitor = dynamic_cast<UnaryVisitor<DTypeImpl<void>>*>(vis);
     visitor->visit(this);

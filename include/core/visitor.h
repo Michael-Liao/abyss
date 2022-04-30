@@ -12,15 +12,15 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "types.h"
+// #include "types.h"
 
 
 namespace abyss::core {
 
-class Array;
+// class Array;
 
-template <typename T>
-class ArrayImpl;
+// template <typename T>
+// class ArrayImpl;
 
 /**
  * @brief Common base class for all visitors
@@ -55,18 +55,18 @@ class VisitorBase {
  * Any type that supports visit should inherit from this type and implement all
  * `accept` functions.
  */
-class Visitable {
- public:
-  // accepts unary functions
-  virtual void accept(VisitorBase*) = 0;
+// class Visitable {
+//  public:
+//   // accepts unary functions
+//   virtual void accept(VisitorBase*) = 0;
 
-  // accepts binary functions (triple dispatch)
-  virtual void accept(VisitorBase*, Visitable*) = 0;
-  virtual void accept(VisitorBase*, ArrayImpl<bool>*) = 0;
-  virtual void accept(VisitorBase*, ArrayImpl<uint8_t>*) = 0;
-  virtual void accept(VisitorBase*, ArrayImpl<int32_t>*) = 0;
-  virtual void accept(VisitorBase*, ArrayImpl<double>*) = 0;
-};
+//   // accepts binary functions (triple dispatch)
+//   virtual void accept(VisitorBase*, Visitable*) = 0;
+//   virtual void accept(VisitorBase*, ArrayImpl<bool>*) = 0;
+//   virtual void accept(VisitorBase*, ArrayImpl<uint8_t>*) = 0;
+//   virtual void accept(VisitorBase*, ArrayImpl<int32_t>*) = 0;
+//   virtual void accept(VisitorBase*, ArrayImpl<double>*) = 0;
+// };
 
 /**
  * @brief Visitor for unary operations.

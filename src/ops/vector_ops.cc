@@ -40,8 +40,8 @@ std::vector<int> VectorVisitor::calc_output_shape(std::vector<int> shape1,
 /**
  * AddVisitor Implementation
  */
-AddVisitor::AddVisitor(std::vector<int> shape1, std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+AddVisitor::AddVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void AddVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b, backend::add);
@@ -59,9 +59,8 @@ void AddVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
 /**
  * SubtractVisitor Implementation
  */
-SubtractVisitor::SubtractVisitor(std::vector<int> shape1,
-                                 std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+SubtractVisitor::SubtractVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void SubtractVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b, backend::sub);
@@ -79,9 +78,8 @@ void SubtractVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
 /**
  * MultiplyVisitor Implementation
  */
-MultiplyVisitor::MultiplyVisitor(std::vector<int> shape1,
-                                 std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+MultiplyVisitor::MultiplyVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void MultiplyVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b, backend::mult);
@@ -99,8 +97,8 @@ void MultiplyVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
 /**
  * DivideVisitor Implementation
  */
-DivideVisitor::DivideVisitor(std::vector<int> shape1, std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+DivideVisitor::DivideVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void DivideVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b, backend::div);
@@ -115,8 +113,8 @@ void DivideVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
   eval(a, b, backend::div);
 }
 
-EqualVisitor::EqualVisitor(std::vector<int> shape1, std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+EqualVisitor::EqualVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void EqualVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval<int32_t, int32_t, bool>(a, b, backend::equal);
@@ -133,9 +131,8 @@ void EqualVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
   eval<double, double, bool>(a, b, backend::equal);
 }
 
-NotEqualVisitor::NotEqualVisitor(std::vector<int> shape1,
-                                 std::vector<int> shape2)
-    : VectorVisitor(shape1, shape2) {}
+NotEqualVisitor::NotEqualVisitor(TensorDesc desc1, TensorDesc desc2)
+    : VectorVisitor(desc1, desc2) {}
 
 void NotEqualVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval<int32_t, int32_t, bool>(a, b, backend::not_equal);

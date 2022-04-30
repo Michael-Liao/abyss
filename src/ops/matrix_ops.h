@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/array.h"
+#include "core/utility.h"
 #include "core/visitor.h"
 #include "backend/matmul.h"
 #include "core/traits.h"
@@ -28,7 +29,7 @@ class MatmulVisitor final
              std::vector<int>> static calc_output_shape(std::vector<int> shape1,
                                                         std::vector<int>
                                                             shape2);
-  MatmulVisitor(std::vector<int> shape1, std::vector<int> shape2);
+  MatmulVisitor(TensorDesc desc1, TensorDesc desc2);
 
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
@@ -38,27 +39,32 @@ class MatmulVisitor final
   template <typename T1, typename T2>
   void eval(ArrayImpl<T1>* a, ArrayImpl<T2>* b) {
     using result_t = std::common_type_t<T1, T2>;
-    std::vector<int> bc_shp1;
-    std::vector<int> bc_shp2;
-    std::tie(shape_, bc_shp1, bc_shp2) =
-        calc_output_shape(shape1_, shape2_);
+    // std::vector<int> bc_shp1;
+    // std::vector<int> bc_shp2;
+    TensorDesc bc_desc1;
+    TensorDesc bc_desc2;
+    std::tie(desc_.shape, bc_desc1.shape, bc_desc2.shape) =
+        calc_output_shape(desc1_.shape, desc2_.shape);
+
+    bc_desc1.strides = shape2strides(bc_desc1.shape);
+    bc_desc2.strides = shape2strides(bc_desc2.shape);
 
     // broadcast as needed
-    ArrayImpl<T1> a_matched(shape2size(bc_shp1));
-    broadcast_copy(a->begin(), a->end(), shape1_, a_matched.begin(), bc_shp1);
-    ArrayImpl<T2> b_matched(shape2size(bc_shp2));
-    broadcast_copy(b->begin(), b->end(), shape2_, b_matched.begin(), bc_shp2);
+    ArrayImpl<T1> a_matched(shape2size(bc_desc1.shape));
+    broadcast_copy(a->begin(), a->end(), desc1_, a_matched.begin(), bc_desc1);
+    ArrayImpl<T2> b_matched(shape2size(bc_desc1.shape));
+    broadcast_copy(b->begin(), b->end(), desc2_, b_matched.begin(), bc_desc2);
 
-    size_t output_size = shape2size(shape_);
+    size_t output_size = shape2size(desc_.shape);
     auto c = std::make_shared<ArrayImpl<result_t>>(output_size);
 
     int n_stacks =
-        std::accumulate(shape_.rbegin() + 2, shape_.rend(), 1,
+        std::accumulate(desc_.shape.rbegin() + 2, desc_.shape.rend(), 1,
                         std::multiplies<>());
 
-    const int rows = *(bc_shp1.rbegin() + 1);
-    const int common = *bc_shp1.rbegin();
-    const int cols = *bc_shp2.rbegin();
+    const int rows = *(bc_desc1.shape.rbegin() + 1);
+    const int common = *bc_desc1.shape.rbegin();
+    const int cols = *bc_desc2.shape.rbegin();
 
     auto data_it1 = a_matched.begin(rows * common);
     auto data_it2 = b_matched.begin(common * cols);
@@ -75,13 +81,13 @@ class MatmulVisitor final
     }
 
     dtype_ = stypeof<result_t>();
-    strides_ = shape2strides(shape_);
+    desc_.strides = shape2strides(desc_.shape);
     data_ = c;
   }
 
  private:
-  std::vector<int> shape1_;
-  std::vector<int> shape2_;
+  TensorDesc desc1_;
+  TensorDesc desc2_;
 
   // std::vector<int> calc_output_shape(std::vector<int>& shape1,
   //                                    std::vector<int>& shape2);

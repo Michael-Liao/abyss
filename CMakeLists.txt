@@ -35,7 +35,9 @@ add_subdirectory("include/core")
 add_subdirectory("src/ops")
 
 set(ABYSS_PUBLIC_HEADERS  
-  "include/types.h"
+  # "include/types.h"
+  "include/scalartype.h"
+  "include/index.h"
   "include/tensor.h"
   "include/functional.h"
   "include/operators.h"
@@ -43,10 +45,12 @@ set(ABYSS_PUBLIC_HEADERS
 
 add_library(abyss SHARED
   # ${ABYSS_PUBLIC_HEADERS}
-  "src/types.cc"
+  "src/scalartype.cc"
+  # "src/types.cc"
   "src/tensor.cc"
   "src/functional.cc"
   "src/operators.cc"
+  # "src/scalartype.cc"
   )
 
 target_sources(abyss

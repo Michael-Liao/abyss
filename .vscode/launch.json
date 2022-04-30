@@ -10,8 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/tests/abyss-test",
             "args": [
-                "[NDArray][Iterator]",
-                "--section", "\"ndarray values are assignable\"",
+                "[Tensor][full]",
+                // "--section", "\"using range for/\"",
             ],
             // "args": ["--section", "\"broadcast to higher dimensions\""],
             "stopAtEntry": false,

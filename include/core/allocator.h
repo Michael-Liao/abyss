@@ -11,7 +11,7 @@
 // #include "types.h"
 // #include "buffer.h"
 
-namespace abyss {
+namespace abyss::core {
 
 /**
  * @brief Allocator for the n-dimensional container

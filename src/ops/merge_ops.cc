@@ -67,8 +67,8 @@ std::vector<int> AllVisitor::calc_output_shape(std::vector<int> shape,
   return shape;
 }
 
-AllVisitor::AllVisitor(std::vector<int> shape, int axis)
-    : axis_{axis}, in_shape_{shape} {}
+AllVisitor::AllVisitor(TensorDesc desc, int axis)
+    : axis_{axis}, in_desc_{desc} {}
 
 void AllVisitor::visit(ArrayImpl<bool>* a) { eval(a); }
 void AllVisitor::visit(ArrayImpl<uint8_t>* a) { eval(a); }

@@ -1,6 +1,7 @@
 #include "tensor.h"
 
 #include <functional>
+#include <iostream>
 #include <numeric>
 #include <stdexcept>
 #include <typeindex>
@@ -9,79 +10,79 @@
 
 #include "core/array.h"
 // #include "ops/dtype_ops.h"
-#include "ops/util_ops.h"
-#include "ops/merge_ops.h"
 #include "ops/conversion_ops.h"
+#include "ops/dispatcher.h"
+#include "ops/merge_ops.h"
+#include "ops/util_ops.h"
 #include "traits.h"
 
 namespace abyss {
 
-// Tensor Tensor::arange(int start, int stop, int step, ScalarType dtype) {
-//   core::ArangeVisitor<int, int, int> arange_visitor(start, stop, step);
-//   if (dtype == kNone) {
-//     using result_t = std::common_type_t<int, int, int>;
-//     dtype = stypeof<result_t>();
-//   }
-//   dtype->accept(&arange_visitor);
-
-//   return arange_visitor.result();
-// }
-// Tensor Tensor::arange(int stop, ScalarType dtype) {
-//   // aggregated to the first function
-//   return arange(0, stop, 1, dtype);
-// }
-
-Tensor::Tensor(bool scalar) : dtype_{stypeof(scalar)}, shape_{1}, strides_{1} {
-  data_ = std::make_shared<core::ArrayImpl<bool>>(1, scalar);
-}
-Tensor::Tensor(uint8_t scalar) : dtype_{stypeof(scalar)}, shape_{1}, strides_{1} {
-  data_ = std::make_shared<core::ArrayImpl<uint8_t>>(1, scalar);
-}
-Tensor::Tensor(int32_t scalar) : dtype_{stypeof(scalar)}, shape_{1}, strides_{1} {
-  data_ = std::make_shared<core::ArrayImpl<int32_t>>(1, scalar);
-}
-Tensor::Tensor(double scalar) : dtype_{stypeof(scalar)}, shape_{1}, strides_{1} {
-  data_ = std::make_shared<core::ArrayImpl<double>>(1, scalar);
-}
-Tensor::Tensor(std::complex<double> scalar) : dtype_{stypeof(scalar)}, shape_{1}, strides_{1} {
-  data_ = std::make_shared<core::ArrayImpl<std::complex<double>>>(1, scalar);
+Tensor::Tensor(const Tensor& other)
+    : dtype_{other.dtype_},
+      desc_{other.desc_},
+      data_{other.data_},
+      flags_{other.flags_} {
+  // unset editable flag when copied
+  flags_ = flags_ & ~TensorFlags::kIsEditable;
 }
 
-// Tensor::Tensor(ScalarType dtype, std::vector<int> shape,
-//                std::shared_ptr<core::Array> data)
-//     : dtype_{dtype}, shape_{shape}, strides_{core::shape2strides(shape)} {
-//   data_ = data;
-// }
+Tensor::Tensor(Tensor&& other)
+    : dtype_{other.dtype_},
+      desc_{other.desc_},
+      data_{other.data_},
+      flags_{other.flags_} {
+  // unset editable flag when copied
+  // flags_ = flags_ & ~TensorFlags::kIsEditable;
+}
+
+Tensor& Tensor::operator=(Tensor copy) {
+  if (flags(TensorFlags::kIsEditable)) {
+    core::AssignToViewVisitor assign_to_view(copy.desc_, desc_);
+
+    copy.data_->accept(&assign_to_view, data_.get());
+  } else {
+    swap(copy);
+  }
+  return *this;
+}
 
 Tensor Tensor::copy() {
-  core::CopyVisitor copy_visitor(shape_);
-  data()->accept(&copy_visitor);
+  core::CopyVisitor copy_visitor(desc_);
+  data_->accept(&copy_visitor);
 
   return copy_visitor;
 }
 
 Tensor Tensor::all(int axis) const {
-  core::AllVisitor all_visitor(shape_, axis);
+  core::AllVisitor all_visitor(desc_, axis);
   data_->accept(&all_visitor);
 
   return all_visitor;
 }
 
 Tensor Tensor::all() const {
-  core::AllVisitor all_visitor(shape_);
+  core::AllVisitor all_visitor(desc_);
   data_->accept(&all_visitor);
 
   return all_visitor;
 }
 
-const ScalarType& Tensor::dtype() const { return dtype_; }
+ScalarType Tensor::dtype() const { return dtype_; }
 core::Array* Tensor::data() const { return data_.get(); }
+core::TensorDesc Tensor::desc() const { return desc_; }
 
-const std::vector<int>& Tensor::shape() const { return shape_; }
-const std::vector<int>& Tensor::strides() const { return strides_; }
-size_t Tensor::size() const { return data_->size(); }
-size_t Tensor::nbytes() const { return dtype_->itemsize() * size(); }
-size_t Tensor::ndims() const { return shape_.size(); }
+bool Tensor::flags(core::TensorFlags name) {
+  using T = std::underlying_type_t<core::TensorFlags>;
+  return static_cast<T>(flags_ & name);
+}
+
+size_t Tensor::offset() const { return desc_.offset; }
+const std::vector<int>& Tensor::shape() const { return desc_.shape; }
+const std::vector<int>& Tensor::strides() const { return desc_.strides; }
+size_t Tensor::size() const { return core::shape2size(desc_.shape); }
+size_t Tensor::nbytes() const { return dtype_.itemsize() * size(); }
+size_t Tensor::ndims() const { return desc_.shape.size(); }
 
 int Tensor::shape(int index) const {
   auto it = index >= 0 ? shape().begin() : shape().end();
@@ -89,65 +90,236 @@ int Tensor::shape(int index) const {
   return *(it + index);
 }
 
-Tensor Tensor::reshape(std::vector<int> new_shape) {
+int Tensor::strides(int index) const {
+  auto it = index >= 0 ? strides().begin() : strides().end();
+  // length check
+  return *(it + index);
+}
+
+Tensor& Tensor::reshape(std::vector<int> new_shape) {
   if (core::shape2size(new_shape) != size())
     throw std::runtime_error("new shape does not match size");
 
-  Tensor out;
-  out.dtype_ = dtype_;
-  out.shape_ = new_shape;
-  out.strides_ = core::shape2strides(new_shape);
-  out.data_ = data_;
+  init_view();
+  /// @bug reshape might not be a view if the data is already not contiguous
+  view_->flags_ = TensorFlags::kIsView;
+  view_->desc_.shape = new_shape;
+  view_->desc_.strides = core::shape2strides(new_shape);
 
-  return out;
+  if (!flags(TensorFlags::kIsContiguous)) {
+    core::AssignToViewVisitor assign_to_view(desc_, view_->desc_);
+
+    data_->accept(&assign_to_view, view_->data());
+  }
+
+  // return std::move(*view_);
+  return *view_;
 }
 
-Tensor::operator bool() {
-  core::ToScalarVisitor<bool> to_scalar_vis;
-  data_->accept(&to_scalar_vis);
+Tensor& Tensor::broadcast_to(std::vector<int> new_shape) {
+  if (!core::is_broadcastable(shape(), new_shape)) {
+    throw std::domain_error("unable to broadcast to shape");
+  }
 
-  return to_scalar_vis.value();
+  init_view();
+  view_->flags_ = TensorFlags::kIsView;
+  view_->desc_.shape = new_shape;
+  view_->desc_.strides = desc_.strides;
+
+  std::vector<int>& new_strides = view_->desc_.strides;
+  // new_strides.clear();
+
+  // calculate new strides
+  size_t extra_dim = new_shape.size() - desc_.shape.size();
+  if (extra_dim > 0) {
+    // extra dimensions require broadcast, padd zeros to the front of the
+    // strides
+    new_strides.insert(new_strides.begin(), extra_dim, 0);
+  }
+
+  // set strides of broadcastable axis to 0
+  auto it = shape().rbegin();
+  auto strides_it = new_strides.rbegin();
+  auto d_it = new_shape.rbegin();
+  for (size_t i = 0; i < shape().size(); i++) {
+    if (*d_it / *it != 1 && *it == 1) {
+      *strides_it = 0;
+    }
+
+    it++;
+    strides_it++;
+    d_it++;
+  }
+
+  // return std::move(*view_);
+  return *view_;
 }
-Tensor::operator uint8_t() {
-  core::ToScalarVisitor<uint8_t> to_scalar_vis;
-  data_->accept(&to_scalar_vis);
-
-  return to_scalar_vis.value();
+Tensor::const_iterator Tensor::begin() const {
+  return const_iterator(*this, 0);
 }
-Tensor::operator int32_t() {
-  core::ToScalarVisitor<int32_t> to_scalar_vis;
-  data_->accept(&to_scalar_vis);
-
-  return to_scalar_vis.value();  
+Tensor::const_iterator Tensor::end() const {
+  return const_iterator(*this, shape(0));
 }
-Tensor::operator double() {
-  core::ToScalarVisitor<double> to_scalar_vis;
-  data_->accept(&to_scalar_vis);
-
-  return to_scalar_vis.value();
-}
-
-
-// Tensor operator==(const Tensor& a, const Tensor& b) {
-//   if (a.shape() != b.shape())
-//     throw std::runtime_error("cannot comparee 2 tensors with different shape.");
-
-//   core::ComparisonVisitor<std::equal_to<>> comparison_visitor(a.shape());
-
-//   a.data()->accept(&comparison_visitor, b.data());
-
-//   return comparison_visitor.result();
-// }
+Tensor::iterator Tensor::begin() { return iterator(*this, 0); }
+Tensor::iterator Tensor::end() { return iterator(*this, shape(0)); }
 
 std::ostream& operator<<(std::ostream& os, Tensor tensor) {
-  core::ArrayPrintVisitor print_visitor(tensor.shape());
+  core::Dispatcher<Tensor> tsr(tensor);
+  core::ArrayPrintVisitor print_visitor(tsr.desc());
 
-  tensor.data()->accept(&print_visitor);
+  core::Dispatcher<Tensor> dispatcher(tensor);
+
+  dispatcher.accept(&print_visitor);
 
   os << print_visitor.str();
 
   return os;
 }
+
+void Tensor::init_view() {
+  if (view_ == nullptr) {
+    // std::cout<<"view empty" <<std::endl;
+    view_ = std::make_unique<Tensor>(*this);
+  }
+
+  // clear shapes and strides
+  // reset offset back to the offset of the current class
+  view_->desc_.offset = desc_.offset;
+  view_->desc_.shape.clear();
+  view_->desc_.strides.clear();
+  view_->flags_ = TensorFlags::kNoFlags;
+}
+
+
+/**
+ * Tensor::Iterator implementation
+ */
+// template <typename T>
+Tensor::Iterator::Iterator(const Tensor& self, int index)
+    : index_{index}, stride_{self.strides(0)}, offset_{self.offset()}, view_{self} {
+  view_.desc_.shape.assign(self.desc_.shape.begin() + 1,
+                                  self.desc_.shape.end());
+  view_.desc_.strides.assign(self.desc_.strides.begin() + 1,
+                                    self.desc_.strides.end());
+  view_.flags_ = TensorFlags::kIsView | TensorFlags::kIsEditable;
+}
+
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator=(Iterator copy) {
+  swap(copy);
+
+  return *this;
+}
+
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator+=(int n) {
+  index_ += n;
+  return *this;
+}
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator-=(int n) {
+  index_ -= n;
+  return *this;
+}
+
+// template <typename T>
+void Tensor::Iterator::swap(Iterator& other) noexcept {
+  using std::swap;
+
+  // swap(self_, other.self_);
+  swap(index_,other.index_);
+  swap(const_cast<int&>(stride_), const_cast<int&>(other.stride_));
+  swap(const_cast<size_t&>(offset_), const_cast<size_t&>(other.offset_));
+  swap(view_, other.view_);
+}
+
+// template <typename T>
+Tensor::Iterator::reference Tensor::Iterator::operator*() {
+  update_offset(index_);
+  return view_;
+}
+// template <typename T>
+Tensor::Iterator::pointer Tensor::Iterator::operator->() {
+  update_offset(index_);
+  return &view_;
+}
+
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator++() {
+  ++index_;
+  return *this;
+}
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator++(int ignore) {
+  // return ++*this;
+  index_++;
+  return *this;
+}
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator--() {
+  --index_;
+  return *this;
+}
+// template <typename T>
+Tensor::Iterator& Tensor::Iterator::operator--(int ignore) { 
+  index_--;
+  return *this;
+}
+
+// template <typename T>
+Tensor::Iterator Tensor::Iterator::operator+(int offset) {
+  update_offset(index_);
+  return Iterator(view_, index_ + offset);
+}
+// template <typename T>
+Tensor::Iterator Tensor::Iterator::operator-(int offset) {
+  update_offset(index_);
+  return Iterator(view_, index_ - offset);
+}
+
+// template <typename T>
+Tensor::Iterator::difference_type Tensor::Iterator::operator-(
+    const Iterator& other) {
+  return index_ - other.index_;
+}
+
+// template <typename T>
+Tensor::Iterator::reference Tensor::Iterator::operator[](int index) {
+  update_offset(index_ + index);
+  return view_;
+}
+
+// template <typename T>
+bool Tensor::Iterator::operator==(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ == other.index_;
+}
+// template <typename T>
+bool Tensor::Iterator::operator!=(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ != other.index_;
+}
+// template <typename T>
+bool Tensor::Iterator::operator>(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ > other.index_;
+}
+// template <typename T>
+bool Tensor::Iterator::operator<=(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ <= other.index_;
+}
+bool Tensor::Iterator::operator>=(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ >= other.index_;
+}
+bool Tensor::Iterator::operator<(const Iterator& other) const {
+  return view_.data() == other.view_.data() && index_ < other.index_;
+}
+
+void Tensor::Iterator::update_offset(int index) {
+  // auto coords = core::unravel_index(index, self_.shape());
+
+  size_t offset = offset_ + index * stride_;
+
+  view_.desc_.offset = offset;
+}
+
 
 namespace x {
 // experimental implementations

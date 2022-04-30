@@ -17,6 +17,7 @@
 #include <typeinfo>
 
 #include "abyss_export.h"
+// #include "scalartype.h"
 // #include "buffer.h"
 // #include "core/array.h"
 // #include "core/dtype.h"
@@ -24,11 +25,12 @@
 
 namespace abyss {
 
-namespace core {
-class DType;
-}
+// namespace core {
+// class DTypeBase;
+// }
 
-using ScalarType = core::DType*;
+// using ScalarType = core::DTypeBase*;
+// class ScalarType {};
 
 // extern DType* kNone;
 // extern DType* kUint8;

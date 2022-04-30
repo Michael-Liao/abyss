@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "functional.h"
+#include "operators.h"
 #include "types.h"
 
 TEST_CASE("test add function on scalars (int, double)", "[functional][add][scalar][int-double]") {
@@ -48,6 +49,14 @@ TEST_CASE("tensor subtraction", "[functional][subtract]") {
 
     auto c = abyss::subtract(a, b);
     REQUIRE(c.shape() == std::vector<int>{3, 2});
+    // limitations of c++, it is not possible to do in-place conversion.
+    // The catch library is trying to convert const Tensor& into bool,
+    // which does not follow the rules of conversion operator.
+    // see examples: https://en.cppreference.com/w/cpp/language/cast_operator
+    bool all_true = (c == abyss::full({3, 2}, -1)).all();
+    REQUIRE(all_true);
+    // REQUIRE((bool)(c == abyss::full({3, 2}, -1)).all());
+    // REQUIRE( static_cast<bool>((c == abyss::full({3, 2}, -1)).all()) );
   }
 }
 

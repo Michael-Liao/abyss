@@ -12,31 +12,30 @@ namespace abyss::core {
 
 template <typename TgtTp>
 class ToScalarVisitor : public VisitorBase,
-                        public UnaryVisitor<ArrayImpl<bool>>,
-                        public UnaryVisitor<ArrayImpl<uint8_t>>,
-                        public UnaryVisitor<ArrayImpl<int32_t>>,
-                        public UnaryVisitor<ArrayImpl<double>> {
+                        public UnaryVisitor<ArrayImpl<TgtTp>> {
  public:
-  ToScalarVisitor() = default;
+  ToScalarVisitor(TensorDesc desc) : desc_{desc} {}
 
-  void visit(ArrayImpl<bool>* a) override { eval(a); }
-  void visit(ArrayImpl<uint8_t>* a) override { eval(a); }
-  void visit(ArrayImpl<int32_t>* a) override { eval(a); }
-  void visit(ArrayImpl<double>* a) override { eval(a); }
+  void visit(ArrayImpl<TgtTp>* a) override { eval(a); }
 
   TgtTp value() const { return value_; }
 
  private:
   TgtTp value_;
+  TensorDesc desc_;
 
-  template <typename InTp>
-  void eval(ArrayImpl<InTp>* a) {
-    if (a->size() != 1) {
-      throw std::runtime_error(
+  // template <typename InTp>
+  void eval(ArrayImpl<TgtTp>* a) {
+    if (desc_.shape.size() != 1 || desc_.shape[0] != 1) {
+      throw std::domain_error(
           "array of element more than one cannot be converted to scalar");
     }
+    // if (a->size() != 1) {
+    //   throw std::runtime_error(
+    //       "array of element more than one cannot be converted to scalar");
+    // }
 
-    value_ = static_cast<TgtTp>(a->at(0));
+    value_ = a->at(desc_.offset);
     // value_ = 0;
   }
 };

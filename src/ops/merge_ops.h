@@ -7,6 +7,7 @@
 
 #include "abyss_export.h"
 #include "core/array.h"
+#include "core/utility.h"
 #include "core/traits.h"
 #include "core/visitor.h"
 #include "tensor.h"
@@ -50,7 +51,7 @@ class ConcatVisitor final
   void eval(ArrayImpl<T1>* a, ArrayImpl<T2>* b) {
     auto out = std::make_shared<ArrayImpl<OutTp>>(a->size() + b->size());
 
-    shape_ = calc_output_shape(shape1_, shape2_, axis_);
+    desc_.shape = calc_output_shape(shape1_, shape2_, axis_);
 
     const int gap_b = std::accumulate(shape2_.rbegin(), shape2_.rend() - axis_,
                                       1, std::multiplies<int>());
@@ -75,7 +76,7 @@ class ConcatVisitor final
 
     dtype_ = stypeof<int32_t>();
     // output_shape_ = calc_output_shape(shape1_, shape2_, axis_);
-    strides_ = shape2strides(shape_);
+    desc_.strides = shape2strides(desc_.shape);
     data_ = out;
   }
 };
@@ -87,10 +88,10 @@ class AllVisitor final : public VisitorBase,
                          public UnaryVisitor<ArrayImpl<int32_t>>,
                          public UnaryVisitor<ArrayImpl<double>> {
  public:
-  static const int kNoAxis = std::numeric_limits<int>::max();
+  // static const int kNoAxis = std::numeric_limits<int>::max();
   static std::vector<int> calc_output_shape(std::vector<int> shape, int axis);
 
-  AllVisitor(std::vector<int> shape, int axis = kNoAxis);
+  AllVisitor(TensorDesc desc, int axis = kNoAxis);
 
   void visit(ArrayImpl<bool>*) override;
   void visit(ArrayImpl<uint8_t>*) override;
@@ -98,26 +99,36 @@ class AllVisitor final : public VisitorBase,
   void visit(ArrayImpl<double>*) override;
 
  private:
+  static const int kNoAxis = std::numeric_limits<int>::max();
   int axis_;
-  std::vector<int> in_shape_;
+  TensorDesc in_desc_;
 
   template <typename T>
   void eval(ArrayImpl<T>* arr) {
     // output shape cal
-    shape_ = calc_output_shape(in_shape_, axis_);
+    desc_.shape = calc_output_shape(in_desc_.shape, axis_);
+    size_t in_size = shape2size(in_desc_.shape);
 
-    size_t output_size = shape2size(shape_);
+    size_t output_size = shape2size(desc_.shape);
     auto out = std::make_shared<ArrayImpl<T>>(output_size);
 
-    size_t stride = (axis_ == kNoAxis) ? 1 : shape2strides(in_shape_)[axis_];
+    size_t stride = (axis_ == kNoAxis) ? 1 : shape2strides(in_desc_.shape)[axis_];
     for (size_t i = 0; i < output_size; i++) {
       // safe boolean conversion (for all arithmetics types)
       out->at(i) =
           std::all_of(arr->begin(), arr->end(), [](T a) { return (a != 0); });
+
+      // out->at(i);
+      // auto coords = unravel_index(i, in_desc_.shape);
+      // size_t offset = in_desc_.offset;
+      // for (size_t i = 0; i < in_size; i++) {
+      //   offset +=
+      // }
+      
     }
 
     dtype_ = stypeof<T>();
-    strides_ = shape2strides(shape_);
+    desc_.strides = shape2strides(desc_.shape);
     data_ = out;
   }
 };

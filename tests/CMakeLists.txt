@@ -6,7 +6,7 @@ include(Catch)
 add_executable(abyss-test
   "test_main.cc"
   "test_array.cc"
-  "test_ndarray.cc"
+  "test_utility.cc"
   "test_tensor.cc"
   "test_functional.cc"
   )
@@ -26,7 +26,7 @@ target_link_libraries(abyss-test
   PRIVATE
     Catch2::Catch2
     abyss-backend
-    # abyss-core
+    abyss-core
     abyss-ops
     abyss
   )

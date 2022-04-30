@@ -1,5 +1,7 @@
 #include "types.h"
-#include "core/dtype.h"
+
+// #include "scalartype.h"
+// #include "core/dtype.h"
 
 namespace abyss {
 
@@ -12,10 +14,10 @@ static core::DTypeImpl<double> kFloat64_;
 static core::DTypeImpl<std::complex<double>> kComplex128_;
 }  // namespace detail
 
-const ScalarType kNone = &detail::kNone_;
+const ScalarType kNone(&detail::kNone_);
 const ScalarType kBool = &detail::kBool_;
 const ScalarType kUint8 = &detail::kUint8_;
-const ScalarType kInt32 = &detail::kInt32_;
+// const ScalarType kInt32 = &detail::kInt32_;
 const ScalarType kFloat64 = &detail::kFloat64_;
 const ScalarType kComplex128 = &detail::kComplex128_;
 

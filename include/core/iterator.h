@@ -3,14 +3,117 @@
 
 #include <iterator>
 
+#include "utility.h"
+
 namespace abyss::core {
 
 /**
- * @brief n-dimensional iterator.
+ * @brief iterator with strides
  *
  * Specifies strides as an optional parameter to stride through different
  * dimensions. It matches all specs of random access iterator.
  */
+template <typename T>
+class StridedIterator {
+ public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = T;
+  using pointer = T*;
+  using reference = T&;
+  using iterator_category = std::random_access_iterator_tag;
+
+  StridedIterator() = default;
+  StridedIterator(pointer ptr, int stride = 1) : ptr_{ptr}, stride_{stride} {}
+  StridedIterator(const StridedIterator&) = default;
+  StridedIterator(StridedIterator&&) = default;
+
+  StridedIterator& operator=(const StridedIterator&) = default;
+  StridedIterator& operator=(StridedIterator&&) = default;
+
+  StridedIterator& operator+=(int n) {
+    ptr_ += n * stride_;
+    return *this;
+  }
+  StridedIterator& operator-=(int n) {
+    ptr_ -= n * stride_;
+    return *this;
+  }
+
+  ~StridedIterator() = default;
+
+  StridedIterator operator+(int n) {
+    pointer ptr = ptr_ + (n * stride_);
+    return StridedIterator(ptr, stride_);
+  }
+
+  StridedIterator operator-(int n) {
+    pointer ptr = ptr_ - n * stride_;
+    return StridedIterator(ptr, stride_);
+  }
+
+  reference operator*() { return *ptr_; }
+  pointer operator->() { return ptr_; }
+
+  StridedIterator& operator++() {
+    // ++it
+    ptr_ += stride_;
+    return *this;
+  }
+  StridedIterator& operator++(int) {
+    // it++
+    ptr_ += stride_;
+    return *this;
+  }
+  StridedIterator& operator--() {
+    // --it
+    ptr_ -= stride_;
+    return *this;
+  }
+  StridedIterator& operator--(int) {
+    // it--
+    ptr_ -= stride_;
+    return *this;
+  }
+
+  difference_type operator-(const StridedIterator& other) {
+    return ptr_ - other.ptr_;
+  }
+
+  reference operator[](int offset) { return *(ptr_ + offset * stride_); }
+
+  bool operator==(const StridedIterator& other) const {
+    return ptr_ == other.ptr_;
+  }
+  bool operator!=(const StridedIterator& other) const {
+    return !(*this == other);
+  }
+  bool operator<(const StridedIterator& other) const {
+    return ptr_ < other.ptr_;
+  }
+  bool operator>(const StridedIterator& other) const {
+    return ptr_ > other.ptr_;
+  }
+  bool operator>=(const StridedIterator& other) const {
+    return !(*this < other);
+  }
+  bool operator<=(const StridedIterator& other) const {
+    return !(*this > other);
+  }
+
+ private:
+  pointer ptr_ = nullptr;
+  // int steps_ = 1;
+  int stride_ = 1;
+};
+
+/**
+ * Extra operators for StridedIterator
+ */
+template <typename T>
+StridedIterator<T> operator+(int n, StridedIterator<T> nditer) {
+  return nditer + n;
+}
+
 template <typename T>
 class NDIterator {
  public:
@@ -20,67 +123,67 @@ class NDIterator {
   using reference = T&;
   using iterator_category = std::random_access_iterator_tag;
 
-  NDIterator() = default;
-  NDIterator(pointer ptr, int stride = 1) : ptr_{ptr}, stride_{stride} {}
-  // NDIterator(pointer ptr, int steps, int stride = 1) : ptr_{ptr}, steps_{steps}, stride_{stride} {}
-  NDIterator(const NDIterator&) = default;
-  NDIterator(NDIterator&&) = default;
+  NDIterator(pointer ptr, TensorDesc desc, int index = 0) : ptr_{ptr}, index_{index}, desc_{desc} {}
 
-  NDIterator& operator=(const NDIterator&) = default;
-  NDIterator& operator=(NDIterator&&) = default;
+  NDIterator(const NDIterator&) = default;
 
   NDIterator& operator+=(int n) {
-    ptr_ += n * stride_;
+    index_ += n;
     return *this;
   }
-  NDIterator& operator-=(int n) { ptr_ -= n * stride_; }
+  NDIterator& operator-=(int n) {
+    index_ -= n;
+    return *this;
+  }
 
   ~NDIterator() = default;
 
-  /**
-   * @brief set stride of iterator.
-   *
-   * Changing strides at runtime is useful especially when printing?
-   */
-  void set_stride(int new_stride) { stride_ = new_stride; }
-
-  NDIterator operator+(int n) {
-    pointer ptr = ptr_ + (n * stride_);
-    return NDIterator(ptr, stride_);
+  reference operator*() {
+    size_t offset = calc_offset(index_);
+    return *(ptr_ + offset);
   }
-
-  NDIterator operator-(int n) {
-    pointer ptr = ptr_ - n * stride_;
-    return NDIterator(ptr, stride_);
+  pointer operator->() {
+    size_t offset = calc_offset(index_);
+    return ptr_ + offset;
   }
-
-  reference operator*() { return *ptr_; }
-  pointer operator->() { return ptr_; }
 
   NDIterator& operator++() {
     // ++it
-    ptr_ += stride_;
+    *this += 1;
     return *this;
   }
   NDIterator& operator++(int) {
     // it++
-    ptr_ += stride_;
+    *this += 1;
     return *this;
   }
   NDIterator& operator--() {
     // --it
-    ptr_ -= stride_;
+    *this -= 1;
     return *this;
   }
   NDIterator& operator--(int) {
     // it--
-    ptr_ -= stride_;
+    *this -= 1;
     return *this;
   }
 
-  difference_type operator-(const NDIterator& other) { return ptr_ - other.ptr_; }
+  NDIterator operator+(int n) {
+    return NDIterator(ptr_, desc_, index_ + n);
+  }
 
-  reference operator[](int offset) { return *(ptr_ + offset * stride_); }
+  NDIterator operator-(int n) {
+    return NDIterator(ptr_, desc_, index_ - n);
+  }
+
+  difference_type operator-(const NDIterator& other) {
+    return index_ - other.index_;
+  }
+
+  reference operator[](int shift) {
+    size_t offset = calc_offset(index_ + shift);
+    return *(ptr_ + offset);
+  }
 
   bool operator==(const NDIterator& other) const { return ptr_ == other.ptr_; }
   bool operator!=(const NDIterator& other) const { return !(*this == other); }
@@ -91,34 +194,20 @@ class NDIterator {
 
  private:
   pointer ptr_ = nullptr;
-  // int steps_ = 1;
-  int stride_ = 1;
+  int index_ = 0;
+  TensorDesc desc_;
+
+  size_t calc_offset(int index) {
+    auto coords = unravel_index(index, desc_.shape);
+
+    size_t offset = desc_.offset;
+    for (size_t i = 0; i < coords.size(); i++) {
+      offset += coords[i] * desc_.strides[i];
+    }
+
+    return offset;
+  }
 };
-
-/**
- * Extra operators
- */
-// template <typename T>
-// NDIterator<T> operator+(NDIterator<T> nditer, int n) {
-//   auto ptr = nditer.ptr_ + n;
-//   return NDIterator<T>(ptr, nditer.stride_);
-// }
-template <typename T>
-NDIterator<T> operator+(int n, NDIterator<T> nditer) {
-  return nditer + n;
-}
-
-// template <typename T>
-// bool operator==(const NDIterator<T>& a, const NDIterator<T>& b) { return
-// a.ptr_ == b.ptr_; } template <typename T> bool operator!=(const
-// NDIterator<T>& a, const NDIterator<T>& b) { return !(a == b); } template
-// <typename T> bool operator<(const NDIterator<T>& a, const NDIterator<T>& b) {
-// return a.ptr_ < b.ptr_; } template <typename T> bool operator>(const
-// NDIterator<T>& a, const NDIterator<T>& b) { return a.ptr_ > b.ptr_; }
-// template <typename T>
-// bool operator>=(const NDIterator<T>& a, const NDIterator<T>& b) { return !(a
-// < b); } template <typename T> bool operator<=(const NDIterator<T>& a, const
-// NDIterator<T>& b) { return !(a > b); }
 
 }  // namespace abyss::core
 

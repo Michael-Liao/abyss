@@ -47,8 +47,8 @@ MatmulVisitor::calc_output_shape(std::vector<int> shape1, std::vector<int> shape
   return std::make_tuple(output_shape, shape1, shape2);
 }
 
-MatmulVisitor::MatmulVisitor(std::vector<int> shape1, std::vector<int> shape2)
-    : shape1_{shape1}, shape2_{shape2} {}
+MatmulVisitor::MatmulVisitor(TensorDesc desc1, TensorDesc desc2)
+    : desc1_{desc1}, desc2_{desc2} {}
 void MatmulVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b);
 }
