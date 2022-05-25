@@ -123,7 +123,7 @@ class NDIterator {
   using reference = T&;
   using iterator_category = std::random_access_iterator_tag;
 
-  NDIterator(pointer ptr, TensorDesc desc, int index = 0) : ptr_{ptr}, index_{index}, desc_{desc} {}
+  NDIterator(pointer ptr, ArrayDesc desc, int index = 0) : ptr_{ptr}, index_{index}, desc_{desc} {}
 
   NDIterator(const NDIterator&) = default;
 
@@ -195,7 +195,7 @@ class NDIterator {
  private:
   pointer ptr_ = nullptr;
   int index_ = 0;
-  TensorDesc desc_;
+  ArrayDesc desc_;
 
   size_t calc_offset(int index) {
     auto coords = unravel_index(index, desc_.shape);

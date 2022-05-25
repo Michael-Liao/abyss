@@ -115,7 +115,7 @@ TEST_CASE("n-dim iterators that calculates proper offsets", "[array][NDIterator]
   auto arr = ArrayImpl<int>::from_range(6);
 
   SECTION("contiguous array") {
-    TensorDesc desc{0, {2, 3}, {3, 1}};
+    ArrayDesc desc{0, {2, 3}, {3, 1}};
 
     auto it = arr.nbegin(desc);
     for (size_t i = 0; i < 2 * 3; i++) {
@@ -127,7 +127,7 @@ TEST_CASE("n-dim iterators that calculates proper offsets", "[array][NDIterator]
   }
 
   SECTION("a slice") {
-    TensorDesc desc{3, {3}, {1}};
+    ArrayDesc desc{3, {3}, {1}};
 
     auto it = arr.nbegin(desc);
     int count = 0;

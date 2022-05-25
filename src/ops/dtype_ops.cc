@@ -58,4 +58,7 @@ void FullVisitor::visit(ArrayImpl<double>* value, DTypeImpl<double>* dtype) {
 //   eval(dtype);
 // }
 
+  RandNormalVisitor::RandNormalVisitor(std::vector<int> shape) : shape_{shape} {}
+  void RandNormalVisitor::visit(DTypeImpl<double>* dtype) { eval(dtype); }
+
 }  // namespace abyss::core

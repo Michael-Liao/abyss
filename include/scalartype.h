@@ -11,10 +11,10 @@
 
 namespace abyss {
 
-class ABYSS_EXPORT ScalarType : public core::Dispatchable {
+class ABYSS_EXPORT ScalarType {
  public:
   template <typename T>
-  ScalarType(T* dtype) : data_{dtype} {
+  ScalarType(T* dtype) : dyn_type_{dtype} {
     static_assert(std::is_base_of<core::DTypeBase, T>::value,
                   "should be a child of DTypeBase");
   }
@@ -23,16 +23,16 @@ class ABYSS_EXPORT ScalarType : public core::Dispatchable {
 
   ScalarType& operator=(ScalarType copy);
 
-  std::type_index id() const { return data_->id(); }
-  size_t itemsize() const { return data_->itemsize(); }
+  std::type_index id() const { return dyn_type_->id(); }
+  size_t itemsize() const { return dyn_type_->itemsize(); }
 
   bool operator==(const ScalarType& other) const;
   bool operator!=(const ScalarType& other) const;
 
  protected:
-  core::DTypeBase* data_;
+  core::DTypeBase* dyn_type_;
 
-  core::DTypeBase* data() const override { return data_; }
+  core::DTypeBase* type() const { return dyn_type_; }
   // void desc() { /* dummy */
   // }
 };

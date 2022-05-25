@@ -41,16 +41,22 @@ set(ABYSS_PUBLIC_HEADERS
   "include/tensor.h"
   "include/functional.h"
   "include/operators.h"
+
+  # "include/nn/tensor.h"
+  "include/autograd/graph.h"
+  "include/autograd/function.h"
   )
 
 add_library(abyss SHARED
   # ${ABYSS_PUBLIC_HEADERS}
   "src/scalartype.cc"
-  # "src/types.cc"
   "src/tensor.cc"
   "src/functional.cc"
   "src/operators.cc"
-  # "src/scalartype.cc"
+  
+  # "src/nn/tensor.cc"
+  "src/autograd/functors.h"
+  "src/autograd/graph.cc"
   )
 
 target_sources(abyss

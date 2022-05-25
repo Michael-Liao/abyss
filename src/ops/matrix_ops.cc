@@ -8,6 +8,15 @@ namespace abyss::core {
 
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
 MatmulVisitor::calc_output_shape(std::vector<int> shape1, std::vector<int> shape2) {
+  // special case for vec-vec
+  if (shape1.size() == 1 && shape2.size() == 1) {
+    if (shape1 != shape2) {
+      throw std::runtime_error("matmul: common shape mismatch");
+    }
+    
+    return std::make_tuple(std::vector<int>{1}, shape1, shape2);
+  }
+  
   if (shape1.size() < 2) {
     shape1.insert(shape1.begin(), 1);
   }
@@ -47,7 +56,7 @@ MatmulVisitor::calc_output_shape(std::vector<int> shape1, std::vector<int> shape
   return std::make_tuple(output_shape, shape1, shape2);
 }
 
-MatmulVisitor::MatmulVisitor(TensorDesc desc1, TensorDesc desc2)
+MatmulVisitor::MatmulVisitor(ArrayDesc desc1, ArrayDesc desc2)
     : desc1_{desc1}, desc2_{desc2} {}
 void MatmulVisitor::visit(ArrayImpl<int32_t>* a, ArrayImpl<int32_t>* b) {
   eval(a, b);

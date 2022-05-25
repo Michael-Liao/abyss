@@ -5,15 +5,15 @@
 namespace abyss {
 
 ScalarType& ScalarType::operator=(ScalarType copy) {
-  std::swap(data_, copy.data_);
+  std::swap(dyn_type_, copy.dyn_type_);
 
   return *this;
 }
 bool ScalarType::operator==(const ScalarType& other) const {
-  return data_ == other.data_;
+  return dyn_type_ == other.dyn_type_;
 }
 bool ScalarType::operator!=(const ScalarType& other) const {
-  return data_ != other.data_;
+  return dyn_type_ != other.dyn_type_;
 }
 namespace details {
 static core::DTypeImpl<int32_t> kNone_;

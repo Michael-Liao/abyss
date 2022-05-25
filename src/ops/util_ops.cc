@@ -10,7 +10,7 @@ namespace abyss::core {
 /**
  * CopyVisitor implementation
  */
-CopyVisitor::CopyVisitor(TensorDesc desc) : in_desc_{desc} {}
+CopyVisitor::CopyVisitor(ArrayDesc desc) : in_desc_{desc} {}
 
 void CopyVisitor::visit(ArrayImpl<int32_t>* from) {
   eval(from);
@@ -22,7 +22,7 @@ void CopyVisitor::visit(ArrayImpl<double>* from) {
 /**
  * AssignToViewVisitor Implementation
  */
-AssignToViewVisitor::AssignToViewVisitor(TensorDesc desc1, TensorDesc desc2)
+AssignToViewVisitor::AssignToViewVisitor(ArrayDesc desc1, ArrayDesc desc2)
     : desc1_{desc1}, desc2_{desc2} {}
 void AssignToViewVisitor::visit(ArrayImpl<int32_t>* from,
                                 ArrayImpl<int32_t>* to) {

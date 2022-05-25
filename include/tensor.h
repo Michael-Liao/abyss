@@ -1,44 +1,67 @@
-#ifndef ABYSS_TENSOR_H
-#define ABYSS_TENSOR_H
+#ifndef ABYSS_NDARRAY_H
+#define ABYSS_NDARRAY_H
 
 /**
  * ref: https://fossies.org/linux/tensorflow/tensorflow/cc/framework/ops.h
  */
 
+#include <algorithm>
 #include <cstring>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <stdexcept>
 // #include <typeindex>
 // #include <typeinfo>
 // #include <unordered_map>
 #include <utility>
-#include <array>
+// #include <array>
 #include <vector>
-#include <atomic>
 
 #include "abyss_export.h"
 // #include "types.h"
-#include "scalartype.h"
-#include "index.h"
-#include "core/traits.h"
 #include "core/array.h"
+#include "core/traits.h"
 #include "core/utility.h"
+#include "index.h"
+#include "scalartype.h"
 // #include "core/visitor.h"
-#include "ops/conversion_ops.h"
+// #include "ops/conversion_ops.h"
 
 namespace abyss {
 
 using TensorFlags = core::TensorFlags;
 
+namespace autograd {
+// meta graph class
+class Graph;
+
+// forward function mixin
+template <typename ChildType>
+class Function;
+
+// backward function
+class BackwardFn;
+}  // namespace autograd
+
 /**
  * @brief A type erased multi-dimensional array.
  */
-class ABYSS_EXPORT Tensor : public core::Dispatchable {
+class ABYSS_EXPORT Tensor {
  public:
   // template <typename T>
   // class Initializer;
+
+  // hash needs internal members
+  friend struct std::hash<Tensor>;
+
+  // graph create grad during backward ops
+  friend class autograd::Graph;
+
+  // autograd function creates grad_fn on the fly
+  template <typename ChildType>
+  friend class autograd::Function;
 
   // stashing iterator
   class Iterator;
@@ -46,6 +69,8 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
 
   using iterator = Iterator;
   using const_iterator = Iterator;
+
+  class KeyEqual;
 
   Tensor() = default;
 
@@ -62,7 +87,8 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
   /**
    * @brief Construct Tensor from a scalar.
    */
-  template <typename T, std::enable_if_t<core::is_supported_dtype<T>::value, bool> = true>
+  template <typename T,
+            std::enable_if_t<core::is_supported_dtype<T>::value, bool> = true>
   Tensor(T scalar) : dtype_(stypeof<T>(scalar)), desc_{0, {1}, {1}} {
     data_ = std::make_shared<core::ArrayImpl<T>>(1, scalar);
   }
@@ -78,15 +104,6 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
     // std::cout << "Tensor destruct" << std::endl;
   }
 
-  // friend void swap(Tensor& a, Tensor& b) noexcept {
-  //   using std::swap;
-
-  //   swap(a.dtype_, b.dtype_);
-  //   swap(a.desc_, b.desc_);
-  //   swap(a.data_, b.data_);
-  //   swap(a.flags_, b.flags_);
-  // }
-
   void swap(Tensor& other) noexcept {
     using std::swap;
 
@@ -94,9 +111,9 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
     swap(desc_, other.desc_);
     swap(data_, other.data_);
     swap(flags_, other.flags_);
+    swap(grad_, other.grad_);
+    swap(grad_fn_, other.grad_fn_);
   }
-
-  // friend class core::VisitorBase;
 
   /**
    * @brief Deep copy of tensors
@@ -115,13 +132,15 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
   // Tensor any() const;
 
   ScalarType dtype() const;
-  // core::TensorDesc desc() const { return desc_; }
+  // core::ArrayDesc desc() const { return desc_; }
   size_t offset() const;
   const std::vector<int>& shape() const;
   const std::vector<int>& strides() const;
   // core::Array* data() const;
 
-  bool flags(core::TensorFlags name);
+  // bool flags(core::TensorFlags name);
+  bool flags(core::FlagId name) const;
+  void set_flag(core::FlagId name, bool value);
 
   size_t size() const;
   size_t nbytes() const;
@@ -138,42 +157,90 @@ class ABYSS_EXPORT Tensor : public core::Dispatchable {
   iterator end();
 
   /**
-   * interaction with static types
+   * interaction with static types.
+   *
+   * The conversion operator only converts to what the dtype specifies. Just
+   * like std::any_cast
    */
-  template <typename T, std::enable_if_t<core::is_supported_dtype<T>::value, bool> = true>
+  template <typename T,
+            std::enable_if_t<core::is_supported_dtype<T>::value, bool> = true>
   operator T() {
-    core::ToScalarVisitor<T> to_scalar_vis(desc_);
-    data_->accept(&to_scalar_vis);
+    // static_assert(core::is_supported_dtype<T>::value, "cannot convert to
+    // tensor unsupported native scalar");
+    if (desc_.shape.size() != 1 || desc_.shape[0] != 1) {
+      throw std::domain_error(
+          "array of element more than one cannot be converted to scalar");
+    }
 
-    return to_scalar_vis.value();
+    if (dtype_.id() != typeid(T)) {
+      throw std::runtime_error("conversion to scalar must be the same type");
+    }
+
+    auto typed_data = std::dynamic_pointer_cast<core::ArrayImpl<T>>(data_);
+
+    return *typed_data->nbegin(desc_);
   }
 
+  /**
+   * @brief slicing using the call operator
+   *
+   * becuase operator[] does not take more than one argument
+   */
   template <typename... IdTypes>
   Tensor& operator()(IdTypes... indices);
 
+  /**
+   * @brief tensor transpose
+   *
+   * https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
+   */
+  Tensor& transpose(std::vector<int> axes);
+
+  /**
+   * @brief covenient transpose method
+   *
+   * This returns the most common type of transpose with strides inverted.
+   */
+  Tensor& T();
+
+  /**
+   * @brief funcitons for autograd
+   */
+  // bool requires_grad();
+  // bool is_leaf();
+  Tensor& grad();
+  autograd::BackwardFn& grad_fn();
+
+  void backward(Tensor gradient = 1);
+
  protected:
   ScalarType dtype_ = kNone;
-  core::TensorDesc desc_;
+  core::ArrayDesc desc_;
   std::shared_ptr<core::Array> data_;
-  // other properties for back-propagation
-  TensorFlags flags_ = TensorFlags::kIsContiguous | TensorFlags::kOwnsData;
-  // bool is_contiguous_ = true;
-  // bool is_leaf = true;
+  // TensorFlags flags_ = TensorFlags::kIsContiguous | TensorFlags::kOwnsData;
+  TensorFlags flags_;
 
   std::unique_ptr<Tensor> view_;
-  // Tensor* grad_;
-  // core::VisitorBase* grad_fn_;
 
-  core::Array* data() const override;
-  core::TensorDesc desc() const override;
+  // back-propagation related fields
+  // bool requires_grad_ = false;
+  std::shared_ptr<Tensor> grad_;
+  std::shared_ptr<autograd::BackwardFn> grad_fn_;
+
+  core::Array* data() const;
+  core::ArrayDesc desc() const;
 
   /**
    * @brief initialize view object for writing.
-   * 
-   * allocate view if not exist, and clear flags and tensor description if already allocated.
+   *
+   * allocate view if not exist, and clear flags and tensor description if
+   * already allocated.
    */
   void init_view();
+  void init_grad();
 };
+
+// const Tensor NoData;
 
 // Tensor operator==(const Tensor& a, const Tensor& b);
 ABYSS_EXPORT std::ostream& operator<<(std::ostream& os, Tensor tensor);
@@ -220,7 +287,6 @@ ABYSS_EXPORT std::ostream& operator<<(std::ostream& os, Tensor tensor);
 // template <typename T>
 class Tensor::Iterator {
  public:
-
   using difference_type = std::ptrdiff_t;
   using value_type = Tensor;
   using pointer = value_type*;
@@ -266,7 +332,7 @@ class Tensor::Iterator {
  private:
   // std::shared_ptr<core::Array> ptr_;
   // Tensor self_;
-  int index_ = 0; // index to unravel
+  int index_ = 0;  // index to unravel
   const int stride_ = 0;
   const size_t offset_ = 0;
 
@@ -278,10 +344,16 @@ class Tensor::Iterator {
   void update_offset(int index);
 };
 
+class Tensor::KeyEqual {
+ public:
+  bool operator()(const Tensor& a, const Tensor& b) const {
+    return a.data_ == b.data_;
+  }
+};
+
 /**
  * Tensor implementations
  */
-
 
 template <typename... IdTypes>
 Tensor& Tensor::operator()(IdTypes... indices) {
@@ -292,7 +364,9 @@ Tensor& Tensor::operator()(IdTypes... indices) {
   std::array<Index, kIdSize> ids{std::forward<Index>(indices)...};
 
   init_view();
-  view_->flags_ = TensorFlags::kIsView | TensorFlags::kIsEditable;
+  // view_->flags_ = TensorFlags::kIsView | TensorFlags::kIsEditable;
+  view_->set_flag(core::FlagId::kIsView, true);
+  view_->set_flag(core::FlagId::kIsEditable, true);
 
   bool is_contiguous = true;
   auto shape_it = desc_.shape.begin();
@@ -314,7 +388,7 @@ Tensor& Tensor::operator()(IdTypes... indices) {
   while (shape_it != desc_.shape.end()) {
     view_->desc_.shape.emplace_back(*shape_it);
     view_->desc_.strides.emplace_back(*strides_it);
-    
+
     shape_it++;
     strides_it++;
   }
@@ -326,7 +400,8 @@ Tensor& Tensor::operator()(IdTypes... indices) {
   }
 
   if (is_contiguous) {
-    view_->flags_ = view_->flags_ | TensorFlags::kIsContiguous;
+    // view_->flags_ = view_->flags_ | TensorFlags::kIsContiguous;
+    view_->set_flag(core::FlagId::kIsContiguous, true);
   }
 
   // return std::move(*view_);
@@ -382,5 +457,17 @@ Tensor& Tensor::operator()(IdTypes... indices) {
 // }
 
 }  // namespace abyss
+
+/**
+ * @brief make Tensor hashable
+ */
+template <>
+struct std::hash<abyss::Tensor> {
+  size_t operator()(const abyss::Tensor& arr) const noexcept {
+    bool requires_grad = arr.flags(abyss::core::FlagId::kRequiresGrad);
+    return std::hash<abyss::core::Array*>{}(arr.data_.get()) ^ (std::hash<bool>{}(requires_grad) << 1);
+    // return arr.data_.get();
+  }
+};
 
 #endif  // ABYSS_TENSOR_H

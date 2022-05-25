@@ -2,10 +2,12 @@
 #define ABYSS_CORE_UTILITY_H
 
 #include <algorithm>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 #include <iostream>
+#include <numeric>
+#include <vector>
 
 #include "abyss_export.h"
 
@@ -16,7 +18,7 @@ namespace abyss::core {
  *
  * This struct groups properties for calculation and slicing
  */
-struct TensorDesc {
+struct ArrayDesc {
   size_t offset = 0;
   std::vector<int> shape;
   std::vector<int> strides;
@@ -25,28 +27,69 @@ struct TensorDesc {
 /**
  * @brief tensor flag mask to query flags
  */
-enum class ABYSS_EXPORT TensorFlags : uint64_t {
-  kNoFlags = 0,
-  kIsContiguous = 1 << 0,
-  kOwnsData = 1 << 1,
-  kIsView = 1 << 2,
-  kIsEditable = 1 << 3,
+enum class FlagId : size_t {
+  kIsContiguous,  // 0
+  kOwnsData,      // 1
+  kIsView,        // 2
+  kIsEditable,    // 3
+  kRequiresGrad,  // 4
+  kIsLeaf         // 5
 };
 
-inline ABYSS_EXPORT TensorFlags operator~(TensorFlags flag) {
-  using T = std::underlying_type_t<TensorFlags>;
-  return static_cast<TensorFlags>(~static_cast<T>(flag));
-}
+class TensorFlags {
+ public:
+  using value_t = std::underlying_type_t<FlagId>;
+  using bits_t = std::bitset<sizeof(value_t)>;
 
-inline ABYSS_EXPORT TensorFlags operator|(TensorFlags flg1, TensorFlags flg2) {
-  using T = std::underlying_type_t<TensorFlags>;
-  return static_cast<TensorFlags>(static_cast<T>(flg1) | static_cast<T>(flg2));
-}
+  TensorFlags() {
+    // default flags are contiguous and owns data
+    flags_.set(0, true);
+    flags_.set(1, true);
+  }
 
-inline ABYSS_EXPORT TensorFlags operator&(TensorFlags flg1, TensorFlags flg2) {
-  using T = std::underlying_type_t<TensorFlags>;
-  return static_cast<TensorFlags>(static_cast<T>(flg1) & static_cast<T>(flg2));
-}
+  void reset() { flags_.reset(); }
+
+  bool operator[](FlagId id) const {
+    auto pos = static_cast<value_t>(id);
+
+    return flags_[pos];
+  }
+
+  bits_t::reference operator[](FlagId id) {
+    auto pos = static_cast<value_t>(id);
+
+    return flags_[pos];
+  }
+
+ private:
+  bits_t flags_;
+};
+// enum class ABYSS_EXPORT TensorFlags : uint64_t {
+//   kNoFlags = 0,
+//   kIsContiguous = 1 << 0,
+//   kOwnsData = 1 << 1,
+//   kIsView = 1 << 2,
+//   kIsEditable = 1 << 3,
+// };
+
+// inline ABYSS_EXPORT TensorFlags operator~(TensorFlags flag) {
+//   using T = std::underlying_type_t<TensorFlags>;
+//   return static_cast<TensorFlags>(~static_cast<T>(flag));
+// }
+
+// inline ABYSS_EXPORT TensorFlags operator|(TensorFlags flg1, TensorFlags flg2)
+// {
+//   using T = std::underlying_type_t<TensorFlags>;
+//   return static_cast<TensorFlags>(static_cast<T>(flg1) |
+//   static_cast<T>(flg2));
+// }
+
+// inline ABYSS_EXPORT TensorFlags operator&(TensorFlags flg1, TensorFlags flg2)
+// {
+//   using T = std::underlying_type_t<TensorFlags>;
+//   return static_cast<TensorFlags>(static_cast<T>(flg1) &
+//   static_cast<T>(flg2));
+// }
 
 /**
  * @brief calculate array element size from the shape
@@ -117,12 +160,11 @@ inline bool is_broadcastable(const std::vector<int>& shape1,
  * @brief costum copy function that takes slices into consideration
  */
 template <typename InputIt, typename OutputIt>
-OutputIt copy(InputIt first, InputIt last, TensorDesc desc, OutputIt d_first,
-              TensorDesc d_desc) {
-  
+OutputIt copy(InputIt first, InputIt last, ArrayDesc desc, OutputIt d_first,
+              ArrayDesc d_desc) {
   first += desc.offset;
   d_first += d_desc.offset;
-  
+
   // raw index to iterate through
   size_t index = 0;
   size_t offset = 0;
@@ -143,7 +185,7 @@ OutputIt copy(InputIt first, InputIt last, TensorDesc desc, OutputIt d_first,
       offset += desc.strides[i] * coords[i];
     }
 
-    *(d_first + d_offset) = *(first + offset); // assign to output
+    *(d_first + d_offset) = *(first + offset);  // assign to output
 
     // d_first[d_offset] = first[offset];
 
@@ -158,7 +200,7 @@ OutputIt copy(InputIt first, InputIt last, TensorDesc desc, OutputIt d_first,
 
 /**
  * @brief Broadcast and copy the input sequence into an output
- * 
+ *
  * https://stackoverflow.com/questions/39626233/how-did-numpy-implement-multi-dimensional-broadcasting
  * TL;DR set stride of broadcast axis to 0
  *
@@ -171,11 +213,12 @@ OutputIt copy(InputIt first, InputIt last, TensorDesc desc, OutputIt d_first,
  * @param d_desc Target description to broadcast to.
  */
 template <typename InputIt, typename OutputIt>
-OutputIt broadcast_copy(InputIt first, InputIt last, TensorDesc desc,
-                        OutputIt d_first, TensorDesc d_desc) {
+OutputIt broadcast_copy(InputIt first, InputIt last, ArrayDesc desc,
+                        OutputIt d_first, ArrayDesc d_desc) {
   size_t extra_dim = d_desc.shape.size() - desc.shape.size();
   if (extra_dim > 0) {
-    // extra dimensions require broadcast, padd zeros to the front of the strides
+    // extra dimensions require broadcast, padd zeros to the front of the
+    // strides
     desc.strides.insert(desc.strides.begin(), extra_dim, 0);
   }
 
@@ -192,7 +235,7 @@ OutputIt broadcast_copy(InputIt first, InputIt last, TensorDesc desc,
     strides_it++;
     d_it++;
   }
-  
+
   // copy the data
   first += desc.offset;
   d_first += d_desc.offset;
@@ -213,14 +256,14 @@ OutputIt broadcast_copy(InputIt first, InputIt last, TensorDesc desc,
     for (size_t i = 0; i < coords.size(); i++) {
       d_offset += coords[i] * d_desc.strides[i];
     }
-    
+
     *(d_first + d_offset) = *(first + offset);
 
     // std::cout<< d_offset << ", " << offset<<std::endl;
 
     index++;
   }
-  
+
   return d_first + d_offset + 1;
 }
 

@@ -1,7 +1,7 @@
 #include "operators.h"
 
 #include "functional.h"
-#include "ops/dispatcher.h"
+#include "core/dispatcher.h"
 #include "ops/vector_ops.h"
 
 namespace abyss {
@@ -15,8 +15,8 @@ Tensor operator==(Tensor lhs, Tensor rhs) {
   /// strides should also be taken into consideration
   using namespace core;
   
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+  DataDispatcher<Tensor> a(lhs);
+  DataDispatcher<Tensor> b(rhs);
 
   EqualVisitor equal_visitor(a.desc(), b.desc());
 
@@ -27,8 +27,8 @@ Tensor operator==(Tensor lhs, Tensor rhs) {
 Tensor operator!=(Tensor lhs, Tensor rhs) {
   using namespace core;  
 
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+  DataDispatcher<Tensor> a(lhs);
+  DataDispatcher<Tensor> b(rhs);
 
   NotEqualVisitor not_equal_visitor(a.desc(), b.desc());
 

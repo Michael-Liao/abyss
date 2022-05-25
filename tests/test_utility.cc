@@ -70,7 +70,7 @@ TEST_CASE("test utility functions is broadcastable", "[utility][is_broadcastable
 TEST_CASE("copy", "[core][utility][copy]") {
   using namespace abyss::core;
 
-  TensorDesc src_desc{0, {4, 1, 2}, {2, 2, 1}};
+  ArrayDesc src_desc{0, {4, 1, 2}, {2, 2, 1}};
   std::vector<int> src_data = {0, 1, 2, 3, 4, 5, 6, 7};
 
   SECTION("copy contiguous into contiguous") {
@@ -84,7 +84,7 @@ TEST_CASE("copy", "[core][utility][copy]") {
   SECTION("copy slice into continuous") {
     // sliced from {4, 2, 2}
     src_desc.strides = {4, 2, 1};
-    TensorDesc dst_desc{0, {4, 1, 2}, {2, 2, 1}};
+    ArrayDesc dst_desc{0, {4, 1, 2}, {2, 2, 1}};
     src_data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<int> tgt_data = {0, 1, 4, 5, 8, 9, 12, 13};
 
@@ -101,7 +101,7 @@ TEST_CASE("copy", "[core][utility][copy]") {
     std::vector<int> dst_data = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
     // sliced from 4, 2, 2
-    TensorDesc desc{0, {4, 1, 2}, {4, 2, 1}};
+    ArrayDesc desc{0, {4, 1, 2}, {4, 2, 1}};
 
     copy(src_data.begin(), src_data.end(), desc, dst_data.begin(), desc);
 
@@ -111,7 +111,7 @@ TEST_CASE("copy", "[core][utility][copy]") {
 
   SECTION("copy contiguous into transposed") {
     /// @note transpose should not be copied into
-    // TensorDesc dst_desc{0, {2, 1, 4}, {1, 2, 2}}; // transposed
+    // ArrayDesc dst_desc{0, {2, 1, 4}, {1, 2, 2}}; // transposed
     // std::vector<int> dst_data(src_data.size(), -1);
 
     // std::vector<int> tgt_data = {0, 2, 4, 6, 1, 3, 5, 7};
@@ -130,10 +130,10 @@ TEST_CASE("broadcast copy", "[core][utility][broadcast_copy]") {
   using namespace abyss::core;
 
   SECTION("broadcast with same dimension") {
-    TensorDesc src_desc{0, {4, 1, 2}, {2, 2, 1}};
+    ArrayDesc src_desc{0, {4, 1, 2}, {2, 2, 1}};
     // std::vector<int> shape = {4, 1, 2};
     // auto arr = ArrayImpl<int32_t>::from_range(8);
-    TensorDesc dst_desc{0, {4, 3, 2}, {6, 2, 1}};
+    ArrayDesc dst_desc{0, {4, 3, 2}, {6, 2, 1}};
     // std::vector<int> dst_shape = {4, 3, 2};
     // auto arr_out = std::make_shared<ArrayImpl<int32_t>>(24);
 
@@ -165,7 +165,7 @@ TEST_CASE("broadcast copy", "[core][utility][broadcast_copy]") {
 
   SECTION("broadcast to higher dimensions") {
     // std::vector<int> d_shape = {4, 3};
-    TensorDesc dst_desc;
+    ArrayDesc dst_desc;
     dst_desc.shape = {4, 3};
     dst_desc.strides = shape2strides(dst_desc.shape);
     auto arr = ArrayImpl<int32_t>::from_range(3);
@@ -174,7 +174,7 @@ TEST_CASE("broadcast copy", "[core][utility][broadcast_copy]") {
 
     SECTION("normal case") {
       // std::vector<int> shape = {3};
-      TensorDesc src_desc;
+      ArrayDesc src_desc;
       src_desc.shape = {3};
       src_desc.strides = {1};
 
@@ -189,7 +189,7 @@ TEST_CASE("broadcast copy", "[core][utility][broadcast_copy]") {
 
     SECTION("including leading shape of 1") {
       std::vector<int> shape = {1, 3};
-      TensorDesc src_desc{0, {1, 3}, {3, 1}};
+      ArrayDesc src_desc{0, {1, 3}, {3, 1}};
       ArrayImpl<int32_t> out(12);
       
       broadcast_copy(arr.begin(), arr.end(), src_desc, out.begin(), dst_desc);
@@ -203,9 +203,9 @@ TEST_CASE("broadcast copy", "[core][utility][broadcast_copy]") {
 
   SECTION("fit scalar to tensor") {
     std::vector<int> shape = {1};
-    TensorDesc src_desc{0, {1}, {1}};
+    ArrayDesc src_desc{0, {1}, {1}};
     std::vector<int> d_shape = {4, 2, 2};
-    TensorDesc dst_desc{0, {4, 2, 2}, shape2strides({4, 2, 2})};
+    ArrayDesc dst_desc{0, {4, 2, 2}, shape2strides({4, 2, 2})};
 
     ArrayImpl<int32_t> arr(1, 1); // scalar
     ArrayImpl<int32_t> out(16);

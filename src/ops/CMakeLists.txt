@@ -2,9 +2,7 @@
 add_library(abyss-ops OBJECT)
 
 set(ABYSS_OPS_HEADERS
-  "dispatcher.h"
-  # "visitor.h"
-  # "operation.h"
+  # "dispatcher.h"
   "dtype_ops.h"
   "util_ops.h"
   "merge_ops.h"
@@ -24,7 +22,7 @@ set(ABYSS_OPS_SOURCES
 
 target_sources(abyss-ops
   PRIVATE
-    ${ABYSS_OPS_HEADERS}
+    # ${ABYSS_OPS_HEADERS}
     ${ABYSS_OPS_SOURCES}
   )
 target_compile_features(abyss-ops PUBLIC cxx_std_14)

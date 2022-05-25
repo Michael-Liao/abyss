@@ -4,12 +4,12 @@
 		{
 			"type": "cppbuild",
 			"label": "CMake: Debug build",
-			"command": "/usr/local/bin/cmake",
+			"command": "cmake",
 			"args": [
 				"--build", "${workspaceFolder}/build",
 				"--config", "Debug",
 				"--target", "all",
-				"--", "-j18"
+				"--", "-j8"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"

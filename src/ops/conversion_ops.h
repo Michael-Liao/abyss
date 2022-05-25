@@ -14,7 +14,7 @@ template <typename TgtTp>
 class ToScalarVisitor : public VisitorBase,
                         public UnaryVisitor<ArrayImpl<TgtTp>> {
  public:
-  ToScalarVisitor(TensorDesc desc) : desc_{desc} {}
+  ToScalarVisitor(ArrayDesc desc) : desc_{desc} {}
 
   void visit(ArrayImpl<TgtTp>* a) override { eval(a); }
 
@@ -22,7 +22,7 @@ class ToScalarVisitor : public VisitorBase,
 
  private:
   TgtTp value_;
-  TensorDesc desc_;
+  ArrayDesc desc_;
 
   // template <typename InTp>
   void eval(ArrayImpl<TgtTp>* a) {
