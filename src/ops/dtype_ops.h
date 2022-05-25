@@ -3,13 +3,14 @@
 
 #include <complex>
 #include <memory>
+#include <random>
 #include <vector>
 
 #include "abyss_export.h"
 #include "core/array.h"
-#include "core/utility.h"
 #include "core/dtype.h"
 #include "core/traits.h"
+#include "core/utility.h"
 #include "core/visitor.h"
 #include "tensor.h"
 #include "types.h"
@@ -51,6 +52,9 @@ class EmptyVisitor final : public VisitorBase,
 
     size_t output_size = shape2size(shape_);
     data_ = std::make_shared<ArrayImpl<T>>(output_size);
+    flags_[core::FlagId::kIsContiguous] = true;
+    flags_[core::FlagId::kOwnsData] = true;
+    flags_[core::FlagId::kIsLeaf] = true;
   }
 };
 
@@ -88,41 +92,80 @@ class FullVisitor final
     desc_.shape = shape_;
     desc_.strides = shape2strides(shape_);
     data_ = std::make_shared<ArrayImpl<T2>>(output_size, value->at(0));
+    flags_[core::FlagId::kIsContiguous] = true;
+    flags_[core::FlagId::kOwnsData] = true;
+    flags_[core::FlagId::kIsLeaf] = true;
   }
 };
 
-// template <typename T, std::enable_if_t<is_supported_dtype<T>::value, bool> = true>
-template <typename T>
-class ArangeVisitor final : public VisitorBase,
-                            public Tensor,
-                            public UnaryVisitor<DTypeImpl<bool>>,
-                            public UnaryVisitor<DTypeImpl<uint8_t>>,
-                            public UnaryVisitor<DTypeImpl<int32_t>>,
-                            public UnaryVisitor<DTypeImpl<double>> {
- public:
-  static_assert(is_supported_dtype<T>::value, "ArangeVisitor must be a supported type");
-  // ArangeVisitor() = default;
-  ArangeVisitor(T start, T stop, T step)
-      : start_{start}, stop_{stop}, step_{step} {}
+// template <typename T, std::enable_if_t<is_supported_dtype<T>::value, bool> =
+// true> template <typename T> class ArangeVisitor final : public VisitorBase,
+//                             public Tensor,
+//                             public UnaryVisitor<DTypeImpl<bool>>,
+//                             public UnaryVisitor<DTypeImpl<uint8_t>>,
+//                             public UnaryVisitor<DTypeImpl<int32_t>>,
+//                             public UnaryVisitor<DTypeImpl<double>> {
+//  public:
+//   static_assert(is_supported_dtype<T>::value, "ArangeVisitor must be a
+//   supported type");
+//   // ArangeVisitor() = default;
+//   ArangeVisitor(T start, T stop, T step)
+//       : start_{start}, stop_{stop}, step_{step} {}
 
-  void visit(DTypeImpl<bool>* dtype) override { eval(dtype); }
-  void visit(DTypeImpl<uint8_t>* dtype) override { eval(dtype); }
-  void visit(DTypeImpl<int32_t>* dtype) override { eval(dtype); }
-  void visit(DTypeImpl<double>* dtype) override { eval(dtype); }
+//   void visit(DTypeImpl<bool>* dtype) override { eval(dtype); }
+//   void visit(DTypeImpl<uint8_t>* dtype) override { eval(dtype); }
+//   void visit(DTypeImpl<int32_t>* dtype) override { eval(dtype); }
+//   void visit(DTypeImpl<double>* dtype) override { eval(dtype); }
+
+//  private:
+//   T start_ = 0;
+//   T stop_ = 1;
+//   T step_ = 1;
+
+//   template <typename TgtTp>
+//   void eval(DTypeImpl<TgtTp>* dtype) {
+//     auto out = ArrayImpl<T>::from_range(start_, stop_, step_);
+
+//     dtype_ = dtype;
+//     desc_.shape = {static_cast<int>(out.size())};
+//     desc_.strides = {1};
+//     data_ = std::make_shared<ArrayImpl<TgtTp>>(out);
+//   }
+// };
+class RandNormalVisitor : public VisitorBase,
+                          public Tensor,
+                          public UnaryVisitor<DTypeImpl<double>> {
+ public:
+  RandNormalVisitor(std::vector<int> shape);
+  void visit(DTypeImpl<double>* dtype) override;
 
  private:
-  T start_ = 0;
-  T stop_ = 1;
-  T step_ = 1;
+  std::vector<int> shape_;
 
   template <typename TgtTp>
   void eval(DTypeImpl<TgtTp>* dtype) {
-    auto out = ArrayImpl<T>::from_range(start_, stop_, step_);
-
     dtype_ = dtype;
-    desc_.shape = {static_cast<int>(out.size())};
-    desc_.strides = {1};
-    data_ = std::make_shared<ArrayImpl<TgtTp>>(out);
+    desc_.offset = 0;
+    desc_.shape = shape_;
+    desc_.strides = shape2strides(shape_);
+
+    size_t output_size = shape2size(shape_);
+    auto arr = std::make_shared<ArrayImpl<TgtTp>>(output_size);
+
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    // rng.seed(0); // currently don't know how to set seed by user
+    std::normal_distribution<TgtTp> dist(0, 1);
+
+    for (size_t i = 0; i < output_size; i++) {
+      arr->at(i) = dist(rng);
+    }
+    
+    data_ = arr;
+
+    flags_[core::FlagId::kIsContiguous] = true;
+    flags_[core::FlagId::kOwnsData] = true;
+    flags_[core::FlagId::kIsLeaf] = true;
   }
 };
 

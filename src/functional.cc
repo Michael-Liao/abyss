@@ -8,17 +8,18 @@
 #include <utility>
 
 // #include "types.h"
-#include "ops/dispatcher.h"
+// #include "ops/dispatcher.h"
 #include "ops/vector_ops.h"
 #include "ops/merge_ops.h"
 #include "ops/matrix_ops.h"
-// #include "ops/dtype_ops.h"
+#include "ops/dtype_ops.h"
+#include "autograd/functors.h"
 
 namespace abyss {
 Tensor empty(std::vector<int> shape, ScalarType dtype) {
   core::EmptyVisitor empty_visitor(shape);
 
-  core::Dispatcher<ScalarType> dtype_dispatch(dtype);
+  core::TypeDispatcher<ScalarType> dtype_dispatch(dtype);
 
   dtype_dispatch.accept(&empty_visitor);
 
@@ -29,7 +30,7 @@ Tensor full(std::vector<int> shape, Tensor fill_value,
                     ScalarType dtype) {
   using namespace core;
   
-  Dispatcher<Tensor> scalar = fill_value;
+  DataDispatcher<Tensor> scalar = fill_value;
 
   FullVisitor full_visitor(shape);
 
@@ -37,7 +38,7 @@ Tensor full(std::vector<int> shape, Tensor fill_value,
     dtype = fill_value.dtype();
   }
   
-  Dispatcher<ScalarType> dtype_diispatch = dtype;
+  TypeDispatcher<ScalarType> dtype_diispatch = dtype;
 
   // fill_value.data()->accept(&full_visitor, dtype);
   scalar.accept(&full_visitor, &dtype_diispatch);
@@ -61,6 +62,19 @@ Tensor full(std::vector<int> shape, Tensor fill_value,
 // Tensor arange(Tensor stop, ScalarType dtype) {
 //   return arange(0, stop, 1, dtype);
 // }
+Tensor randn(std::vector<int> shape, ScalarType dtype) {
+  using namespace core;
+  if (dtype == kNone) {
+    dtype = stypeof<double>();
+  }
+  TypeDispatcher<ScalarType> stype = dtype;
+
+  RandNormalVisitor randn_vis(shape);
+  stype.accept(&randn_vis);
+  
+
+  return randn_vis;
+}
 
 Tensor concat(std::vector<Tensor> tensors, int axis) {
   if (axis < 0)
@@ -69,11 +83,11 @@ Tensor concat(std::vector<Tensor> tensors, int axis) {
   using namespace core;
 
   // create deep copy from the first one
-  Dispatcher<Tensor> out = tensors[0].copy();
+  DataDispatcher<Tensor> out = tensors[0].copy();
   for (int i = 1; i < tensors.size(); i++) {
     ConcatVisitor concat_visitor(out.shape(), tensors[i].shape(), axis);
     // out.data()->accept(&concat_visitor, tensors[i].data());
-    Dispatcher<Tensor> dtsr = tensors[i];
+    DataDispatcher<Tensor> dtsr = tensors[i];
     out.accept(&concat_visitor, &dtsr);
     // assign result back to the output tensor
     out = concat_visitor;
@@ -82,29 +96,35 @@ Tensor concat(std::vector<Tensor> tensors, int axis) {
   return out;
 }
 
-Tensor add(Tensor lhs, Tensor rhs) {
-  using namespace core;
+// Tensor add(Tensor lhs, Tensor rhs) {
+//   using namespace core;
 
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+//   DataDispatcher<Tensor> a(lhs);
+//   DataDispatcher<Tensor> b(rhs);
   
-  // AddVisitor add_visitor(lhs.desc(), rhs.desc());
-  AddVisitor add_visitor(a.desc(), b.desc());
-  // core::AddVisitor add_visitor(lhs.shape(), rhs.shape());
-  // lhs.data()->accept(&add_visitor, rhs.data());
+//   // AddVisitor add_visitor(lhs.desc(), rhs.desc());
+//   AddVisitor add_visitor(a.desc(), b.desc());
+//   // core::AddVisitor add_visitor(lhs.shape(), rhs.shape());
+//   // lhs.data()->accept(&add_visitor, rhs.data());
 
-  // std::cout<<"add function start: ";
+//   // std::cout<<"add function start: ";
 
-  a.accept(&add_visitor, &b);
+//   a.accept(&add_visitor, &b);
 
-  return add_visitor;
+//   return add_visitor;
+// }
+Tensor add(Tensor lhs, Tensor rhs) {
+  // using namespace core;
+  autograd::AddFn add_fn;
+
+  return add_fn.call(lhs, rhs);
 }
 
 Tensor subtract(Tensor lhs, Tensor rhs) {
   using namespace core;
 
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+  DataDispatcher<Tensor> a(lhs);
+  DataDispatcher<Tensor> b(rhs);
   
   SubtractVisitor subtract_visitor(a.desc(), b.desc());
   // core::AddVisitor add_visitor(lhs.shape(), rhs.shape());
@@ -117,8 +137,8 @@ Tensor subtract(Tensor lhs, Tensor rhs) {
 Tensor multiply(Tensor lhs, Tensor rhs) {
   using namespace core;
   
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+  DataDispatcher<Tensor> a(lhs);
+  DataDispatcher<Tensor> b(rhs);
   
   MultiplyVisitor multiply_visitor(a.desc(), b.desc());
   // core::AddVisitor add_visitor(lhs.shape(), rhs.shape());
@@ -130,8 +150,8 @@ Tensor multiply(Tensor lhs, Tensor rhs) {
 Tensor divide(Tensor lhs, Tensor rhs) {
   using namespace core;
   
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
+  DataDispatcher<Tensor> a(lhs);
+  DataDispatcher<Tensor> b(rhs);
   
   DivideVisitor divide_visitor(a.desc(), b.desc());
   // core::AddVisitor add_visitor(lhs.shape(), rhs.shape());
@@ -140,18 +160,23 @@ Tensor divide(Tensor lhs, Tensor rhs) {
   return divide_visitor;
 }
 
+// Tensor matmul(Tensor lhs, Tensor rhs) {
+//   using namespace core;
+
+//   DataDispatcher<Tensor> a(lhs);
+//   DataDispatcher<Tensor> b(rhs);
+  
+//   MatmulVisitor matmul_visitor(a.desc(), b.desc());
+  
+//   // lhs.data()->accept(&matmul_visitor, rhs.data());
+//   a.accept(&matmul_visitor, &b);
+
+//   return matmul_visitor;
+// }
 Tensor matmul(Tensor lhs, Tensor rhs) {
-  using namespace core;
+  autograd::MatmulFn matmul_fn;
 
-  Dispatcher<Tensor> a(lhs);
-  Dispatcher<Tensor> b(rhs);
-  
-  MatmulVisitor matmul_visitor(a.desc(), b.desc());
-  
-  // lhs.data()->accept(&matmul_visitor, rhs.data());
-  a.accept(&matmul_visitor, &b);
-
-  return matmul_visitor;
+  return matmul_fn.call(lhs, rhs);
 }
 
 }  // namespace abyss

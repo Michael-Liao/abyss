@@ -89,11 +89,11 @@ class Visitable {
 /**
  * @brief a type trait to mark things that can be decorated by the `Dispatcher`.
  */
-class Dispatchable {
-  public:
-  virtual Visitable* data() const = 0;
-  virtual TensorDesc desc() const { return TensorDesc(); }
-};
+// class Dispatchable {
+//   public:
+//   virtual Visitable* data() const = 0;
+//   virtual ArrayDesc desc() const { return ArrayDesc(); }
+// };
 
 // namespace detail {
   

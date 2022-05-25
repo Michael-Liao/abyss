@@ -9,105 +9,206 @@
 
 namespace abyss::backend {
 
-void add(const int32_t* in1, const int32_t* in2, const size_t& n,
-         int32_t* out) noexcept {
+// void add(const int32_t* in1, const int32_t* in2, const size_t& n,
+//          int32_t* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] + in2[i];
+//   }
+// }
+// void add(const double* in1, const int32_t* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] + in2[i];
+//   }
+// }
+// void add(const int32_t* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] + in2[i];
+//   }
+// }
+// void add(const double* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] + in2[i];
+//   }
+// }
+
+void add(const int32_t* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, int32_t* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] + in2[i];
+    out_data[i] = in_data1[id1[i]] + in_data2[id2[i]];
   }
 }
-void add(const double* in1, const int32_t* in2, const size_t& n,
-         double* out) noexcept {
+void add(const int32_t* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] + in2[i];
+    out_data[i] = in_data1[id1[i]] + in_data2[id2[i]];
   }
 }
-void add(const int32_t* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void add(const double* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] + in2[i];
+    out_data[i] = in_data1[id1[i]] + in_data2[id2[i]];
   }
 }
-void add(const double* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void add(const double* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] + in2[i];
+    out_data[i] = in_data1[id1[i]] + in_data2[id2[i]];
   }
 }
 
-void sub(const int32_t* in1, const int32_t* in2, const size_t& n,
-         int32_t* out) noexcept {
+// void sub(const int32_t* in1, const int32_t* in2, const size_t& n,
+//          int32_t* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] - in2[i];
+//   }
+// }
+// void sub(const double* in1, const int32_t* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] - in2[i];
+//   }
+// }
+// void sub(const int32_t* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] - in2[i];
+//   }
+// }
+// void sub(const double* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] - in2[i];
+//   }
+// }
+
+void sub(const int32_t* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, int32_t* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] - in2[i];
+    out_data[i] = in_data1[id1[i]] - in_data2[id2[i]];
   }
 }
-void sub(const double* in1, const int32_t* in2, const size_t& n,
-         double* out) noexcept {
+void sub(const int32_t* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] - in2[i];
+    out_data[i] = in_data1[id1[i]] - in_data2[id2[i]];
   }
 }
-void sub(const int32_t* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void sub(const double* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] - in2[i];
+    out_data[i] = in_data1[id1[i]] - in_data2[id2[i]];
   }
 }
-void sub(const double* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void sub(const double* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] * in2[i];
+    out_data[i] = in_data1[id1[i]] - in_data2[id2[i]];
   }
 }
 
-void mult(const int32_t* in1, const int32_t* in2, const size_t& n,
-          int32_t* out) noexcept {
+// void mult(const int32_t* in1, const int32_t* in2, const size_t& n,
+//           int32_t* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] * in2[i];
+//   }
+// }
+// void mult(const int32_t* in1, const double* in2, const size_t& n,
+//           double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] * in2[i];
+//   }
+// }
+// void mult(const double* in1, const int32_t* in2, const size_t& n,
+//           double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] * in2[i];
+//   }
+// }
+// void mult(const double* in1, const double* in2, const size_t& n,
+//           double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] * in2[i];
+//   }
+// }
+
+void mult(const int32_t* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, int32_t* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] * in2[i];
+    out_data[i] = in_data1[id1[i]] * in_data2[id2[i]];
   }
 }
-void mult(const int32_t* in1, const double* in2, const size_t& n,
-          double* out) noexcept {
+void mult(const int32_t* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] * in2[i];
+    out_data[i] = in_data1[id1[i]] * in_data2[id2[i]];
   }
 }
-void mult(const double* in1, const int32_t* in2, const size_t& n,
-          double* out) noexcept {
+void mult(const double* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] * in2[i];
+    out_data[i] = in_data1[id1[i]] * in_data2[id2[i]];
   }
 }
-void mult(const double* in1, const double* in2, const size_t& n,
-          double* out) noexcept {
+void mult(const double* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] * in2[i];
+    out_data[i] = in_data1[id1[i]] * in_data2[id2[i]];
   }
 }
 
-void div(const int32_t* in1, const int32_t* in2, const size_t& n,
-         int32_t* out) noexcept {
+// void div(const int32_t* in1, const int32_t* in2, const size_t& n,
+//          int32_t* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] / in2[i];
+//   }
+// }
+// void div(const int32_t* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] / in2[i];
+//   }
+// }
+// void div(const double* in1, const int32_t* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] / in2[i];
+//   }
+// }
+// void div(const double* in1, const double* in2, const size_t& n,
+//          double* out) noexcept {
+//   for (size_t i = 0; i < n; i++) {
+//     out[i] = in1[i] / in2[i];
+//   }
+// }
+
+void div(const int32_t* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, int32_t* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] / in2[i];
+    out_data[i] = in_data1[id1[i]] / in_data2[id2[i]];
   }
 }
-void div(const int32_t* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void div(const int32_t* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] / in2[i];
+    out_data[i] = in_data1[id1[i]] / in_data2[id2[i]];
   }
 }
-void div(const double* in1, const int32_t* in2, const size_t& n,
-         double* out) noexcept {
+void div(const double* in_data1, const size_t* id1, const int32_t* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] / in2[i];
+    out_data[i] = in_data1[id1[i]] / in_data2[id2[i]];
   }
 }
-void div(const double* in1, const double* in2, const size_t& n,
-         double* out) noexcept {
+void div(const double* in_data1, const size_t* id1, const double* in_data2,
+         const size_t* id2, const size_t n, double* out_data) {
   for (size_t i = 0; i < n; i++) {
-    out[i] = in1[i] / in2[i];
+    out_data[i] = in_data1[id1[i]] / in_data2[id2[i]];
   }
 }
+
 
 // void xsub(const int* in1, const int* in2, const size_t& n, int* out) noexcept
 // {

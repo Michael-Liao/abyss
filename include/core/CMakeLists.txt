@@ -8,6 +8,7 @@ set(ABYSS_CORE_HEADERS
   "array.h"
   "visitor.h"
   "utility.h"
+  "dispatcher.h"
   )
 
 target_sources(abyss-core

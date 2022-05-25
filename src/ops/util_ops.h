@@ -26,20 +26,16 @@ class CopyVisitor final : public VisitorBase,
                           public UnaryVisitor<ArrayImpl<int32_t>>,
                           public UnaryVisitor<ArrayImpl<double>> {
  public:
-  CopyVisitor(TensorDesc desc);
+  CopyVisitor(ArrayDesc desc);
 
   void visit(ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<double>*) override;
 
  private:
-  TensorDesc in_desc_;
+  ArrayDesc in_desc_;
 
   template <typename T>
   void eval(ArrayImpl<T>* from) {
-    dtype_ = stypeof<T>();
-    desc_.offset = 0;
-    desc_.shape = in_desc_.shape;
-    desc_.strides = shape2strides(in_desc_.shape);
     auto arr = std::make_shared<ArrayImpl<T>>(shape2size(in_desc_.shape));
 
     for (size_t o = 0; o < arr->size(); o++) {
@@ -54,6 +50,10 @@ class CopyVisitor final : public VisitorBase,
       arr->at(o) = from->at(offset);
     }
     
+    dtype_ = stypeof<T>();
+    desc_.offset = 0;
+    desc_.shape = in_desc_.shape;
+    desc_.strides = shape2strides(in_desc_.shape);
     data_ = arr;
   }
 };
@@ -66,15 +66,15 @@ class AssignToViewVisitor
       public BinaryVisitor<ArrayImpl<double>, ArrayImpl<int32_t>>,
       public BinaryVisitor<ArrayImpl<double>, ArrayImpl<double>> {
  public:
-  AssignToViewVisitor(TensorDesc desc1, TensorDesc desc2);
+  AssignToViewVisitor(ArrayDesc desc1, ArrayDesc desc2);
   void visit(ArrayImpl<int32_t>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
   void visit(ArrayImpl<double>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<double>*, ArrayImpl<double>*) override;
 
  private:
-  TensorDesc desc1_;
-  TensorDesc desc2_;
+  ArrayDesc desc1_;
+  ArrayDesc desc2_;
   template <typename T1, typename T2>
   void eval(ArrayImpl<T1>* from, ArrayImpl<T2>* to) {
     if (!is_broadcastable(desc1_.shape, desc2_.shape)) {
@@ -90,7 +90,7 @@ class ArrayPrintVisitor final : public VisitorBase,
                                 public UnaryVisitor<ArrayImpl<int32_t>>,
                                 public UnaryVisitor<ArrayImpl<double>> {
  public:
-  ArrayPrintVisitor(const TensorDesc& desc) : in_desc_{desc} {
+  ArrayPrintVisitor(const ArrayDesc& desc) : in_desc_{desc} {
     // std::cout << shape_[0] << std::endl;
   }
   void visit(ArrayImpl<bool>*) override;
@@ -101,7 +101,7 @@ class ArrayPrintVisitor final : public VisitorBase,
   std::string str() { return result_str_; }
 
  private:
-  TensorDesc in_desc_;
+  ArrayDesc in_desc_;
   std::string result_str_;
 
   template <typename T>

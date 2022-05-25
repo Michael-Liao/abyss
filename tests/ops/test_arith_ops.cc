@@ -3,7 +3,7 @@
 #include "core/utility.h"
 #include "ops/vector_ops.h"
 
-#include "ops/dispatcher.h"
+#include "core/dispatcher.h"
 #include "ops/dtype_ops.h"
 #include "scalartype.h"
 #include "tensor.h"
@@ -67,8 +67,8 @@ TEST_CASE("test broadcast shape calculations", "[broadcast][arith]") {
 
 // TEST_CASE("add visitor tests", "[add][visit]") {
 //   using namespace abyss::core;
-//   TensorDesc desc1{0, {3}, {1}};
-//   TensorDesc desc2{0, {3}, {1}};
+//   ArrayDesc desc1{0, {3}, {1}};
+//   ArrayDesc desc2{0, {3}, {1}};
 
 //   ArrayImpl<int32_t> arr1 = {1, 2, 3};
 //   ArrayImpl<int32_t> arr2 = {1, 2, 3};

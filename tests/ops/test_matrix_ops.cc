@@ -56,7 +56,7 @@ TEST_CASE("Matmul Visitor output and broadcast scheme",
 //   using namespace abyss::core;
 
 //   // std::vector<int> shape1 = {3, 3, 2};
-//   TensorDesc desc1{0, {3, 3, 2}, shape2strides({3, 3, 2})};
+//   ArrayDesc desc1{0, {3, 3, 2}, shape2strides({3, 3, 2})};
 //   ArrayImpl<int32_t> arr1 = {1, 2, 3, 4, 5, 6, 1, 2, 3,
 //                              4, 5, 6, 1, 2, 3, 4, 5, 6};
 
@@ -64,7 +64,7 @@ TEST_CASE("Matmul Visitor output and broadcast scheme",
 
 //   SECTION("basic case without broadcast") {
 //     // std::vector<int> shape2 = {3, 2, 3};
-//     TensorDesc desc2{0, {3, 2, 3}, shape2strides({3, 2, 3})};
+//     ArrayDesc desc2{0, {3, 2, 3}, shape2strides({3, 2, 3})};
 //     ArrayImpl<int32_t> arr2 = {1, 1, 1, 1, 1, 1, 2, 2, 2,
 //                                2, 2, 2, 3, 3, 3, 3, 3, 3};
 
@@ -86,7 +86,7 @@ TEST_CASE("Matmul Visitor output and broadcast scheme",
 
 //   SECTION("matmul with broadcasting") {
 //     // std::vector<int> shape2 = {2, 3};
-//   TensorDesc desc2{0, {2, 3}, shape2strides({2, 3})};
+//   ArrayDesc desc2{0, {2, 3}, shape2strides({2, 3})};
 //     ArrayImpl<int32_t> arr2 = {1, 1, 1, 1, 1, 1};
 
 //     ArrayImpl<int32_t> target = {3, 3, 3, 7, 7, 7, 11, 11, 11,

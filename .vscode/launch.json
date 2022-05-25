@@ -10,8 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/tests/abyss-test",
             "args": [
-                "[Tensor][full]",
-                // "--section", "\"using range for/\"",
+                "[backprop][add]",
+                // "--section", "\"interaction between vector and vector\"",
             ],
             // "args": ["--section", "\"broadcast to higher dimensions\""],
             "stopAtEntry": false,

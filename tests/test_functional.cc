@@ -60,13 +60,53 @@ TEST_CASE("tensor subtraction", "[functional][subtract]") {
   }
 }
 
-// TEST_CASE("test matmul function (int, float)", "[functions][matmul][int-float]") {
-//   abyss::Tensor a = {1, 2, 3};
-//   abyss::Tensor b = abyss::full({3}, 2.0f);
+TEST_CASE("test matmul function", "[functions][matmul]") {
+  SECTION("interaction between matrices") {
+    auto a = abyss::full({3, 2}, 1);
+    auto b = abyss::full({2, 3}, 1);
 
-//   REQUIRE(a.shape() == std::vector<int>{3});
+    auto result = abyss::full({3, 3}, 2);
 
-//   auto c = abyss::matmul(a, b);
+    auto c = abyss::matmul(a, b);
 
-//   REQUIRE(c.shape() == std::vector<int>{1});
-// }
+    REQUIRE(c.shape() == std::vector<int>{3, 3});
+    bool all_true =  (c == result).all();
+    CHECK(all_true);
+    // std::cout<< "tensor" <<(c == result).all() << std::endl;
+  }
+
+  SECTION("interaction matrix and vector") {
+    auto w = abyss::full({3, 3}, 1);
+    auto x = abyss::full({3}, 1);
+
+    auto result = abyss::full({3, 1}, 3);
+
+    auto y = abyss::matmul(w, x);
+
+    REQUIRE(y.shape() == std::vector<int>{3, 1});
+    bool all_true = (y == result).all();
+    CHECK(all_true);
+  }
+
+  SECTION("interaction between vector and vector") {
+    auto x = abyss::full({3}, 1);
+    auto y = abyss::full({3}, 1);
+
+    abyss::Tensor result = 3;
+
+    auto z = abyss::matmul(x, y);
+
+    REQUIRE(z.shape() == std::vector<int>{1});
+
+    CHECK(z == result);
+    CHECK(z == 3);
+  }
+
+  SECTION("leading dimensions") {
+    auto x = abyss::full({1, 3}, 1);
+    auto y = abyss::full({3, 2}, 1);
+
+    auto z = abyss::matmul(x, y);
+    REQUIRE(z.shape() == std::vector<int>{1, 2});
+  }
+}

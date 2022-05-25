@@ -26,6 +26,10 @@ struct Array : Visitable {
   virtual ~Array() = default;
 
   virtual size_t size() const = 0;
+  /**
+   * @brief set all data back to 0
+   */
+  virtual void zero() = 0;
 };
 
 template <typename T>
@@ -74,6 +78,10 @@ class ArrayImpl : public Array {
   ~ArrayImpl();
 
   size_t size() const override { return size_; }
+  void zero() override {
+    std::fill_n(data_, size_, 0);
+  }
+
   T* data() const { return data_; }
 
   T& at(int offset) {
@@ -102,8 +110,8 @@ class ArrayImpl : public Array {
     return reverse_iterator(data_ + size_);
   }
 
-  NDIterator<T> nbegin(TensorDesc desc) { return NDIterator<T>(data_, desc); }
-  NDIterator<T> nend(TensorDesc desc) { 
+  NDIterator<T> nbegin(ArrayDesc desc) { return NDIterator<T>(data_, desc); }
+  NDIterator<T> nend(ArrayDesc desc) { 
     size_t real_size = shape2size(desc.shape);
     return NDIterator<T>(data_, desc, real_size);
   }

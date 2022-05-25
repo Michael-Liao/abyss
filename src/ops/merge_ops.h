@@ -91,7 +91,7 @@ class AllVisitor final : public VisitorBase,
   // static const int kNoAxis = std::numeric_limits<int>::max();
   static std::vector<int> calc_output_shape(std::vector<int> shape, int axis);
 
-  AllVisitor(TensorDesc desc, int axis = kNoAxis);
+  AllVisitor(ArrayDesc desc, int axis = kNoAxis);
 
   void visit(ArrayImpl<bool>*) override;
   void visit(ArrayImpl<uint8_t>*) override;
@@ -101,7 +101,7 @@ class AllVisitor final : public VisitorBase,
  private:
   static const int kNoAxis = std::numeric_limits<int>::max();
   int axis_;
-  TensorDesc in_desc_;
+  ArrayDesc in_desc_;
 
   template <typename T>
   void eval(ArrayImpl<T>* arr) {

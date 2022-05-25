@@ -315,16 +315,18 @@ TEST_CASE("tensor comparison equal", "[Tensor][comparison][equal]") {
 
 TEST_CASE("tensor slicing", "[Tensor][slice]") {
   auto tsr = abyss::full({3, 2}, 1);
-  REQUIRE(tsr.flags(abyss::TensorFlags::kIsContiguous));
-  REQUIRE(tsr.flags(abyss::TensorFlags::kOwnsData));
+  // REQUIRE(tsr.flags(abyss::TensorFlags::kIsContiguous));
+  // REQUIRE(tsr.flags(abyss::TensorFlags::kOwnsData));
+  REQUIRE(tsr.flags(abyss::core::FlagId::kIsContiguous));
+  REQUIRE(tsr.flags(abyss::core::FlagId::kOwnsData));
 
   SECTION("slice into a scalar") {
     REQUIRE(tsr(0, 1).shape() == std::vector<int>{1});
     REQUIRE(tsr(0, 1).strides() == std::vector<int>{1});
 
-    REQUIRE(tsr(0, 1).flags(abyss::TensorFlags::kIsContiguous));
-    REQUIRE(tsr(0, 1).flags(abyss::TensorFlags::kIsEditable));
-    REQUIRE_FALSE(tsr(0, 1).flags(abyss::TensorFlags::kOwnsData));
+    REQUIRE(tsr(0, 1).flags(abyss::core::FlagId::kIsContiguous));
+    REQUIRE(tsr(0, 1).flags(abyss::core::FlagId::kIsEditable));
+    REQUIRE_FALSE(tsr(0, 1).flags(abyss::core::FlagId::kOwnsData));
 
     // assign to slice
     tsr(0, 1) = 2;
@@ -335,7 +337,7 @@ TEST_CASE("tensor slicing", "[Tensor][slice]") {
 
     auto view = tsr(0, 1);
     view = 3;
-    CHECK_FALSE(view.flags(abyss::TensorFlags::kIsEditable));
+    CHECK_FALSE(view.flags(abyss::core::FlagId::kIsEditable));
     REQUIRE_FALSE(tsr(0, 1) == 3);
     REQUIRE_NOTHROW(view = abyss::full({2, 2}, 0));
     // uncomment to feel the power and joy!
@@ -353,13 +355,15 @@ TEST_CASE("tensor slicing", "[Tensor][slice]") {
     REQUIRE(view.shape() == std::vector<int>{2, 3});
     REQUIRE(view.strides() == std::vector<int>{3, 1});
     REQUIRE(bool((view == tgt_tensor).all()));
-    REQUIRE(view.flags(abyss::TensorFlags::kIsContiguous));
+    // REQUIRE(view.flags(abyss::TensorFlags::kIsContiguous));
+    REQUIRE(view.flags(abyss::core::FlagId::kIsContiguous));
 
     using Id = abyss::Index;
     view = tensor(Id(0, 3, 2), Id(0), Id(0, 2));
     REQUIRE(view.shape() == std::vector<int>{3, 2});
     REQUIRE(view.strides() == std::vector<int>{12, 1});
-    REQUIRE_FALSE(view.flags(abyss::TensorFlags::kIsContiguous));
+    // REQUIRE_FALSE(view.flags(abyss::TensorFlags::kIsContiguous));
+    REQUIRE_FALSE(view.flags(abyss::core::FlagId::kIsContiguous));
   }
 }
 
