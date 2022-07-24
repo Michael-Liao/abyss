@@ -130,6 +130,15 @@ void xadd(const T1* in1, const T2* in2, const size_t& n,
 //          double* out) noexcept;
 // void xsub(const double* in1, const double* in2, const size_t& n,
 //          double* out) noexcept;
+
+
+ABYSS_EXPORT void neg(const uint8_t* in_data, const size_t* ids, const size_t n,
+                      uint8_t* out_data);
+ABYSS_EXPORT void neg(const int32_t* in_data, const size_t* ids, const size_t n,
+                      int32_t* out_data);
+ABYSS_EXPORT void neg(const double* in_data, const size_t* ids, const size_t n,
+                      double* out_data);
+
 }  // namespace abyss::backend
 
 #endif

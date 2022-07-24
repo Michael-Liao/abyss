@@ -6,12 +6,16 @@ set(ABYSS_BACKEND_HEADERS
   "arithmetics.h"
   "matmul.h"
   "comparison.h"
+  "amath.h"
+  "reduction.h"
   )
 # todo: use different target sources for different compilers so we can swap backends
 set(ABYSS_BACKEND_SOURCES
   "native/arithmetics.cc"
   "native/matmul.cc"
   "native/comparison.cc"
+  "native/amath.cc"
+  "native/reduction.cc"
   )
 
 # message("${ABYSS_PUBLIC_HEADERS}")

@@ -93,8 +93,13 @@ ABYSS_EXPORT Tensor divide(Tensor lhs, Tensor rhs);
 
 ABYSS_EXPORT Tensor matmul(Tensor lhs, Tensor rhs);
 
-ABYSS_EXPORT Tensor sum(Tensor a, int axis = -1);
 ABYSS_EXPORT Tensor exp(Tensor a);
+ABYSS_EXPORT Tensor log(Tensor a);
+
+ABYSS_EXPORT Tensor sum(Tensor a /*, axis = None*/);
+ABYSS_EXPORT Tensor sum(Tensor a, int axis);
+
+ABYSS_EXPORT Tensor negative(Tensor a);
 
 /**
  * complex layer types

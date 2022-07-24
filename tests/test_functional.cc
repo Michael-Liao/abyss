@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include <vector>
+#include <cmath>
 
 #include "functional.h"
 #include "operators.h"
@@ -108,5 +109,52 @@ TEST_CASE("test matmul function", "[functions][matmul]") {
 
     auto z = abyss::matmul(x, y);
     REQUIRE(z.shape() == std::vector<int>{1, 2});
+  }
+}
+
+TEST_CASE("test math functions", "[functions][math]") {
+  /**
+   * put all math functions in different sections
+   */
+  SECTION("exponential") {
+    auto x = abyss::full({3, 2}, 1.0);
+
+    auto y = abyss::exp(x);
+    double result = std::exp(1);
+
+    // std::cout<< y << std::endl;
+
+    bool all_true = (y == result).all();
+    REQUIRE(all_true);
+  }
+}
+
+TEST_CASE("test reeduction function: sum", "[functions][reduce][sum]") {
+  auto a = abyss::full({3, 2, 4}, 1);
+  a.set_flag(abyss::core::FlagId::kRequiresGrad, true);
+
+  SECTION("sum all") {
+    auto b = abyss::sum(a);
+
+    REQUIRE(b.shape() == std::vector<int>{1});
+    bool all_ok = (b == 24);
+    REQUIRE(all_ok);
+
+    b.backward();
+
+    REQUIRE(a.grad().shape() == std::vector<int>{3, 2, 4});
+
+    all_ok = false;
+    all_ok = (a.grad() == 1).all();
+    REQUIRE(all_ok);
+  }
+
+  SECTION("sum along an axis") {
+    auto b = abyss::sum(a, 0);
+    
+    REQUIRE(b.shape() == std::vector<int>{2, 4});
+    bool all_ok = (b == 3).all();
+    // std::cout<< b << std::endl;
+    REQUIRE(all_ok);
   }
 }

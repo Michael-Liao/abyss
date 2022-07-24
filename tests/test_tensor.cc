@@ -365,6 +365,14 @@ TEST_CASE("tensor slicing", "[Tensor][slice]") {
     // REQUIRE_FALSE(view.flags(abyss::TensorFlags::kIsContiguous));
     REQUIRE_FALSE(view.flags(abyss::core::FlagId::kIsContiguous));
   }
+
+  SECTION("random slicing") {
+    auto tensor = abyss::arange(4*2*3).reshape({4, 2, 3});
+    auto view = tensor(abyss::kAll, 0, 1);
+
+    REQUIRE(view.shape() == std::vector<int>{4});
+    REQUIRE(view.strides() == std::vector<int>{6});
+  }
 }
 
 TEST_CASE("test Tensor stashing iterators", "[Tensor][Iterator]") {

@@ -5,6 +5,7 @@
 #include <utility>
 
 // #include "types.h"
+// #include "backend/arr_math.h"
 
 namespace abyss::core {
 
@@ -167,6 +168,43 @@ void NotEqualVisitor::visit(ArrayImpl<double>* a, ArrayImpl<int32_t>* b) {
 void NotEqualVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
   // eval<double, double, bool>(a, b, backend::not_equal);
   broadcast_eval<double, double, bool>(a, b, backend::not_equal);
+}
+
+
+ExpVisitor::ExpVisitor(ArrayDesc desc) : UnaryVectorVisitor{desc} {}
+
+void ExpVisitor::visit(ArrayImpl<uint8_t>* a) {
+  eval(a, backend::exp);
+}
+void ExpVisitor::visit(ArrayImpl<int32_t>* a) {
+  eval(a, backend::exp);
+}
+void ExpVisitor::visit(ArrayImpl<double>* a) {
+  eval(a, backend::exp);
+}
+
+NegateVisitor::NegateVisitor(ArrayDesc desc) : UnaryVectorVisitor{desc} {}
+
+void NegateVisitor::visit(ArrayImpl<uint8_t>* a) {
+  eval(a, backend::neg);
+}
+void NegateVisitor::visit(ArrayImpl<int32_t>* a) {
+  eval(a, backend::neg);
+}
+void NegateVisitor::visit(ArrayImpl<double>* a) {
+  eval(a, backend::neg);
+}
+
+LogVisitor::LogVisitor(ArrayDesc desc) : UnaryVectorVisitor{desc} {}
+
+void LogVisitor::visit(ArrayImpl<uint8_t>* a) {
+  eval(a, backend::log);
+}
+void LogVisitor::visit(ArrayImpl<int32_t>* a) {
+  eval(a, backend::log);
+}
+void LogVisitor::visit(ArrayImpl<double>* a) {
+  eval(a, backend::log);
 }
 
 }  // namespace abyss::core

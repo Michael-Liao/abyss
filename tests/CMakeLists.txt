@@ -14,6 +14,7 @@ add_executable(abyss-test
   add_subdirectory("backend/native")
   # add_subdirectory("ops")
   add_subdirectory("autograd")
+  add_subdirectory("nn")
 
 # message("${PROJECT_SOURCE_DIR}")
 

@@ -3,10 +3,10 @@
 #include <vector>
 
 // #include "tensor.h"
-#include "functional.h"
-#include "core/utility.h"
 #include "autograd/function.h"
 #include "autograd/graph.h"
+#include "core/utility.h"
+#include "functional.h"
 
 TEST_CASE("test tensor construction", "[Tensor]") {
   auto x = abyss::full({3, 2}, 2);
@@ -77,7 +77,7 @@ TEST_CASE("test tensor backprop", "[Tensor][backprop][add]") {
 
   // clears graph after wew finish back prop
   CHECK(autograd::Graph::instance().edges().empty());
-  
+
   // std::cout<< a.grad() << std::endl;
   // INFO(a.grad());
   bool all_true = (a.grad() == 1).all();
@@ -114,4 +114,34 @@ TEST_CASE("matmul backprop", "[Tensor][backprop][matmul]") {
 
   all_true = (x.grad() == 6).all();
   REQUIRE(all_true);
+}
+
+TEST_CASE("conjunction of operations", "[conj][backprop]") {
+  using namespace abyss;
+  auto w = full({3, 2}, 2);
+  w.set_flag(core::FlagId::kRequiresGrad, true);
+
+  SECTION("normal operation") {
+    auto x = full({2, 1}, 1);
+    x.set_flag(core::FlagId::kRequiresGrad, true);
+
+    auto b = full({3, 1}, 1);
+    b.set_flag(core::FlagId::kRequiresGrad, true);
+
+    auto y = matmul(w, x) + b;
+
+    REQUIRE(y.flags(core::FlagId::kRequiresGrad) == true);
+
+    y.backward(full({3, 1}, 1));
+
+    CHECK(w.grad().shape() == std::vector<int>{3, 2});
+
+    bool all_true = (x.grad() == abyss::full({2, 1}, 6.0)).all();
+    CHECK(all_true);
+  }
+
+  SECTION("requires correct broadcast") {
+    auto x = full({2}, 1); // broadcast required
+    x.set_flag(core::FlagId::kRequiresGrad, true);
+  }
 }

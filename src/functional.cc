@@ -179,4 +179,33 @@ Tensor matmul(Tensor lhs, Tensor rhs) {
   return matmul_fn.call(lhs, rhs);
 }
 
+Tensor exp(Tensor a) {
+  autograd::ExpFn exp_fn;
+
+  return exp_fn.call(a);
+}
+
+Tensor log(Tensor a) {
+  autograd::LogFn log_fn;
+
+  return log_fn.call(a);
+}
+
+Tensor sum(Tensor a /*, axis = None*/) {
+  autograd::SumFn sum_fn;
+
+  return sum_fn.call(a);
+}
+Tensor sum(Tensor a, int axis) {
+  autograd::SumFn sum_fn;
+
+  return sum_fn.call(a, axis);
+}
+
+Tensor negative(Tensor a) {
+  autograd::NegateFn negate_fn;
+
+  return negate_fn.call(a);
+}
+
 }  // namespace abyss

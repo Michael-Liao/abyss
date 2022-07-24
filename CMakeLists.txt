@@ -45,6 +45,12 @@ set(ABYSS_PUBLIC_HEADERS
   # "include/nn/tensor.h"
   "include/autograd/graph.h"
   "include/autograd/function.h"
+
+  "include/nn/module.h"
+  "include/nn/activation.h"
+  "include/nn/losses.h"
+  "include/optimizers.h"
+  "include/utils/data.h"
   )
 
 add_library(abyss SHARED
@@ -57,6 +63,12 @@ add_library(abyss SHARED
   # "src/nn/tensor.cc"
   "src/autograd/functors.h"
   "src/autograd/graph.cc"
+
+  "src/nn/module.cc"
+  "src/nn/activation.cc"
+  "src/nn/losses.cc"
+  "src/optimizers.cc"
+  "src/utils/data.cc"
   )
 
 target_sources(abyss

@@ -5,6 +5,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "backend/reduction.h"
+
 namespace abyss::core {
 
 std::vector<int> ConcatVisitor::calc_output_shape(std::vector<int> a,
@@ -55,6 +57,14 @@ void ConcatVisitor::visit(ArrayImpl<double>* a, ArrayImpl<double>* b) {
 //   return new_shape;
 // }
 
+ReductionVisitor::ReductionVisitor(ArrayDesc desc, int axis)
+    : axis_{axis}, in_desc_{desc} {
+  // rectify to only positive axis
+  if (axis_ < 0) {
+    axis_ = desc.shape.size() - axis_;
+  }
+}
+
 std::vector<int> AllVisitor::calc_output_shape(std::vector<int> shape,
                                                int axis) {
   if (axis == kNoAxis) {
@@ -74,5 +84,14 @@ void AllVisitor::visit(ArrayImpl<bool>* a) { eval(a); }
 void AllVisitor::visit(ArrayImpl<uint8_t>* a) { eval(a); }
 void AllVisitor::visit(ArrayImpl<int32_t>* a) { eval(a); }
 void AllVisitor::visit(ArrayImpl<double>* a) { eval(a); }
+
+SumVisitor::SumVisitor(ArrayDesc desc) : ReductionVisitor(desc) {}
+SumVisitor::SumVisitor(ArrayDesc desc, int axis)
+    : ReductionVisitor(desc, axis) {}
+
+void SumVisitor::visit(ArrayImpl<bool>* a) { eval(a, backend::sum); }
+void SumVisitor::visit(ArrayImpl<uint8_t>* a) { eval(a, backend::sum); }
+void SumVisitor::visit(ArrayImpl<int32_t>* a) { eval(a, backend::sum); }
+void SumVisitor::visit(ArrayImpl<double>* a) { eval(a, backend::sum); }
 
 }  // namespace abyss::core

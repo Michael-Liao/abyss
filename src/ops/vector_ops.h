@@ -13,6 +13,7 @@
 #include <vector>
 
 // #include "abyss_export.h"
+#include "backend/amath.h"
 #include "backend/arithmetics.h"
 #include "backend/comparison.h"
 #include "core/array.h"
@@ -183,13 +184,14 @@ class UnaryVectorVisitor : public VisitorBase,
  protected:
   ArrayDesc in_desc_;
 
-  template <typename T, typename Callable = void(const T*, const size_t&, T*)>
+  template <typename T,
+            typename Callable = void(const T*, const size_t*, const size_t, T*)>
   void eval(ArrayImpl<T>* arr, Callable fn) {
     size_t output_size = shape2size(in_desc_.shape);
     auto out = std::make_shared<ArrayImpl<T>>(output_size);
 
     std::vector<int> coords(in_desc_.shape.size(), 0);
-    std::vector<int> ids(output_size, 0);
+    std::vector<size_t> ids(output_size, 0);
     for (size_t i = 0; i < output_size; i++) {
       coords = unravel_index(i, in_desc_.shape);
       size_t offset = in_desc_.offset;
@@ -200,7 +202,7 @@ class UnaryVectorVisitor : public VisitorBase,
       ids[i] = offset;
     }
 
-    fn(arr.data(), ids, output_size, out->data());
+    fn(arr->data(), ids.data(), output_size, out->data());
 
     dtype_ = stypeof<T>();
     desc_ = in_desc_;
@@ -274,6 +276,37 @@ class NotEqualVisitor : public BinaryVectorVisitor {
   void visit(ArrayImpl<int32_t>*, ArrayImpl<double>*) override;
   void visit(ArrayImpl<double>*, ArrayImpl<int32_t>*) override;
   void visit(ArrayImpl<double>*, ArrayImpl<double>*) override;
+};
+
+class ExpVisitor : public UnaryVectorVisitor {
+ public:
+  ExpVisitor(ArrayDesc desc);
+
+  void visit(ArrayImpl<uint8_t>*) override;
+  void visit(ArrayImpl<int32_t>*) override;
+  void visit(ArrayImpl<double>*) override;
+
+ private:
+};
+
+class NegateVisitor : public UnaryVectorVisitor {
+ public:
+  NegateVisitor(ArrayDesc desc);
+
+  void visit(ArrayImpl<uint8_t>*) override;
+  void visit(ArrayImpl<int32_t>*) override;
+  void visit(ArrayImpl<double>*) override;
+};
+
+class LogVisitor : public UnaryVectorVisitor {
+ public:
+  LogVisitor(ArrayDesc desc);
+
+  void visit(ArrayImpl<uint8_t>*) override;
+  void visit(ArrayImpl<int32_t>*) override;
+  void visit(ArrayImpl<double>*) override;
+
+ private:
 };
 
 }  // namespace abyss::core

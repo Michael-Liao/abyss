@@ -9,6 +9,7 @@
 #include <utility>
 
 // #include "autograd/function.h"
+#include "functional.h"
 #include "autograd/graph.h"
 #include "core/array.h"
 #include "core/dispatcher.h"
@@ -267,14 +268,14 @@ void Tensor::init_view() {
 void Tensor::init_grad() {
   if (grad_ == nullptr) {
     grad_ = std::make_shared<Tensor>();
-    *grad_ = copy();
+    *grad_ = empty(shape(), dtype());
     grad_->data_->zero();
   }
 
-  grad_->flags_[core::FlagId::kIsEditable] = true;
+  // grad_->flags_[core::FlagId::kIsEditable] = true;
   grad_->flags_[core::FlagId::kOwnsData] = true;
   grad_->flags_[core::FlagId::kRequiresGrad] = false;
-  // grad_->flags_[core::FlagId::kIsContiguous] = true; ?? maybe
+  grad_->flags_[core::FlagId::kIsContiguous] = true;
 }
 
 /**

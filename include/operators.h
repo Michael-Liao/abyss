@@ -8,9 +8,26 @@
 namespace abyss {
 
 ABYSS_EXPORT Tensor operator+(Tensor a, Tensor b);
+ABYSS_EXPORT inline Tensor operator+(uint8_t a, Tensor b) { return Tensor(a) + b; }
+ABYSS_EXPORT inline Tensor operator+(int32_t a, Tensor b) { return Tensor(a) + b; }
+ABYSS_EXPORT inline Tensor operator+(double a, Tensor b) { return Tensor(a) + b; }
+
 ABYSS_EXPORT Tensor operator-(Tensor a, Tensor b);
+ABYSS_EXPORT inline Tensor operator-(uint8_t a, Tensor b) { return Tensor(a) - b; }
+ABYSS_EXPORT inline Tensor operator-(int32_t a, Tensor b) { return Tensor(a) - b; }
+ABYSS_EXPORT inline Tensor operator-(double a, Tensor b) { return Tensor(a) - b; }
+
 ABYSS_EXPORT Tensor operator*(Tensor a, Tensor b);
+ABYSS_EXPORT inline Tensor operator*(uint8_t a, Tensor b) { return Tensor(a) * b; }
+ABYSS_EXPORT inline Tensor operator*(int32_t a, Tensor b) { return Tensor(a) * b; }
+ABYSS_EXPORT inline Tensor operator*(double a, Tensor b) { return Tensor(a) * b; }
+
 ABYSS_EXPORT Tensor operator/(Tensor a, Tensor b);
+ABYSS_EXPORT inline Tensor operator/(uint8_t a, Tensor b) { return Tensor(a) / b; }
+ABYSS_EXPORT inline Tensor operator/(int32_t a, Tensor b) { return Tensor(a) / b; }
+ABYSS_EXPORT inline Tensor operator/(double a, Tensor b) { return Tensor(a) / b; }
+
+ABYSS_EXPORT Tensor operator-(Tensor a);
 
 ABYSS_EXPORT Tensor operator==(Tensor a, Tensor b);
 ABYSS_EXPORT inline Tensor operator==(Tensor a, bool b) { return a == Tensor(b); }
